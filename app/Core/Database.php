@@ -117,6 +117,30 @@ class Database
                     content LONGTEXT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB");
+            },
+            'create_events_table' => function (PDO $pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS events (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(191) NOT NULL,
+                    description TEXT NULL,
+                    event_date DATETIME NOT NULL,
+                    category VARCHAR(191) NULL,
+                    language VARCHAR(64) NULL,
+                    program VARCHAR(191) NULL,
+                    location VARCHAR(191) NULL,
+                    cta_url VARCHAR(255) NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB");
+            },
+            'create_testimonials_table' => function (PDO $pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(191) NOT NULL,
+                    role VARCHAR(191) NULL,
+                    message TEXT NOT NULL,
+                    avatar_url VARCHAR(255) NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB");
             }
         ];
 

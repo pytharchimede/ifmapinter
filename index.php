@@ -66,6 +66,15 @@ $router->get('/actualites', fn() => view('public/news', [
   'title' => 'Actualités',
   'items' => db()->query('SELECT * FROM news ORDER BY COALESCE(published_at, created_at) DESC')->fetchAll()
 ]));
+$router->get('/actualites/article', function () {
+  $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+  if ($id <= 0) return view('errors/404', ['title' => 'Article introuvable']);
+  $stmt = db()->prepare('SELECT * FROM news WHERE id = ?');
+  $stmt->execute([$id]);
+  $article = $stmt->fetch();
+  if (!$article) return view('errors/404', ['title' => 'Article introuvable']);
+  return view('public/news_show', ['title' => $article['title'], 'article' => $article]);
+});
 $router->get('/programmes', fn() => view('public/programmes', [
   'title' => 'Programmes',
   'items' => db()->query('SELECT * FROM programmes ORDER BY id DESC')->fetchAll()

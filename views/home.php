@@ -175,7 +175,8 @@
                         <img loading="lazy" src="<?= htmlspecialchars($n['image_url'] ?? 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02') ?>">
                         <div class="info">
                             <h3><?= htmlspecialchars($n['title']) ?></h3>
-                            <p><?= htmlspecialchars(mb_strimwidth($n['body'] ?? '', 0, 120, '…')) ?></p>
+                            <p><?= htmlspecialchars(mb_strimwidth($n['body'] ?? '', 0, 180, '…')) ?></p>
+                            <a class="btn-outline" href="<?= base_url('actualites/article?id=' . (int)$n['id']) ?>">Lire l’article →</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -230,6 +231,153 @@
             <?php endif; ?>
         </div>
 
+    </div>
+</section>
+
+
+<!-- ================= TÉMOIGNAGES ================= -->
+<section class="section bg-light" id="temoignages">
+    <div class="container">
+        <div class="section-title">
+            <h2>Témoignages</h2>
+            <p>Ils partagent leur expérience IFMAP.</p>
+        </div>
+        <div class="testimonials">
+            <?php if (!empty($testimonials)): ?>
+                <?php foreach ($testimonials as $t): ?>
+                    <div class="testimonial">
+                        <div class="author">
+                            <img loading="lazy" src="<?= htmlspecialchars($t['avatar_url'] ?? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop') ?>" alt="">
+                            <div class="meta">
+                                <strong><?= htmlspecialchars($t['name']) ?></strong>
+                                <small><?= htmlspecialchars($t['role'] ?? '') ?></small>
+                            </div>
+                        </div>
+                        <p>“<?= htmlspecialchars($t['message']) ?>”</p>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="testimonial">
+                    <div class="author">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop" alt="">
+                        <div class="meta">
+                            <strong>Marie K.</strong>
+                            <small>Alumni – Management</small>
+                        </div>
+                    </div>
+                    <p>“Des enseignements concrets et un excellent accompagnement vers l’emploi.”</p>
+                </div>
+                <div class="testimonial">
+                    <div class="author">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=200&h=200&fit=crop" alt="">
+                        <div class="meta">
+                            <strong>Ismaël A.</strong>
+                            <small>Étudiant – Solaire</small>
+                        </div>
+                    </div>
+                    <p>“Des ateliers pratiques avec du matériel pro, j’ai gagné en confiance.”</p>
+                </div>
+                <div class="testimonial">
+                    <div class="author">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1547425260-76bcadfb4f2a?w=200&h=200&fit=crop" alt="">
+                        <div class="meta">
+                            <strong>Fatou S.</strong>
+                            <small>Partenaire – Retail</small>
+                        </div>
+                    </div>
+                    <p>“Nous recrutons régulièrement des profils IFMAP pour leur professionnalisme.”</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+
+
+<!-- ================= ÉVÉNEMENTS ================= -->
+<section class="section" id="evenements">
+    <div class="container">
+        <div class="section-title">
+            <h2>Venez nous rencontrer</h2>
+            <p>Participez à nos événements et découvrez IFMAP.</p>
+        </div>
+        <div class="events">
+            <?php if (!empty($events)): ?>
+                <?php foreach ($events as $e): ?>
+                    <?php $ts = strtotime($e['event_date']); ?>
+                    <div class="event-card">
+                        <div class="event-date">
+                            <div class="day"><?= date('d', $ts) ?></div>
+                            <div class="month"><?= strftime('%b', $ts) ?></div>
+                        </div>
+                        <div class="event-info">
+                            <h4><?= htmlspecialchars($e['title']) ?></h4>
+                            <div class="meta">
+                                <span><?= htmlspecialchars(date('Y', $ts)) ?></span>
+                                <?php if (!empty($e['language'])): ?><span><?= htmlspecialchars($e['language']) ?></span><?php endif; ?>
+                                <?php if (!empty($e['program'])): ?><span><?= htmlspecialchars($e['program']) ?></span><?php endif; ?>
+                            </div>
+                            <p><?= htmlspecialchars(mb_strimwidth($e['description'] ?? '', 0, 120, '…')) ?></p>
+                            <div class="event-actions">
+                                <?php if (!empty($e['cta_url'])): ?>
+                                    <a class="btn-outline" href="<?= htmlspecialchars($e['cta_url']) ?>" target="_blank" rel="noopener">Inscription</a>
+                                <?php else: ?>
+                                    <a class="btn-outline" href="#">Inscription</a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="event-card">
+                    <div class="event-date">
+                        <div class="day">25</div>
+                        <div class="month">nov</div>
+                    </div>
+                    <div class="event-info">
+                        <h4>Webinaire - Master in Marketing</h4>
+                        <div class="meta"><span>2025</span><span>Anglais</span><span>EMBA</span></div>
+                        <p>Session en ligne pour découvrir le programme.</p>
+                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <div class="event-date">
+                        <div class="day">04</div>
+                        <div class="month">déc</div>
+                    </div>
+                    <div class="event-info">
+                        <h4>Master's programs Virtual Open Day - Fall 2025</h4>
+                        <div class="meta"><span>2025</span><span>Grande École & Masters</span></div>
+                        <p>Échanges avec nos équipes et nos étudiants.</p>
+                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <div class="event-date">
+                        <div class="day">10</div>
+                        <div class="month">déc</div>
+                    </div>
+                    <div class="event-info">
+                        <h4>Webinar – GE spécial lycéens et classes préparatoires</h4>
+                        <div class="meta"><span>2025</span><span>Grande École & Masters</span></div>
+                        <p>Découvrez nos cursus adaptés et nos voies d’admission.</p>
+                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <div class="event-date">
+                        <div class="day">12</div>
+                        <div class="month">déc</div>
+                    </div>
+                    <div class="event-info">
+                        <h4>Deadline Round 2 - Submit your application !</h4>
+                        <div class="meta"><span>2025</span><span>Grande École & Masters</span></div>
+                        <p>Clôture de la session – candidatez maintenant.</p>
+                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 </section>
 
