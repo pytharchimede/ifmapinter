@@ -47,3 +47,61 @@ function db(): PDO
 {
     return Database::pdo();
 }
+
+function current_user(): ?array
+{
+    return $_SESSION['user'] ?? null;
+}
+
+function is_authenticated(): bool
+{
+    return current_user() !== null;
+}
+
+function login_user(array $user): void
+{
+    $_SESSION['user'] = ['id' => $user['id'], 'email' => $user['email']];
+}
+
+function logout_user(): void
+{
+    unset($_SESSION['user']);
+}
+
+function require_auth(callable $next)
+{
+    if (!is_authenticated()) {
+        header('Location: ' . base_url('/login'));
+        return '';
+    }
+    return $next();
+}
+
+// ================= CSRF ================= //
+function csrf_token(): string
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field(): string
+{
+    return '<input type="hidden" name="_token" value="' . htmlspecialchars(csrf_token()) . '">';
+}
+
+function verify_csrf(): bool
+{
+    $sent = $_POST['_token'] ?? '';
+    return hash_equals($_SESSION['csrf_token'] ?? '', $sent);
+}
+
+function require_csrf(): void
+{
+    if (!verify_csrf()) {
+        http_response_code(419);
+        echo view('errors/500', ['title' => 'Erreur sécurité', 'message' => 'Jeton CSRF invalide']);
+        exit;
+    }
+}

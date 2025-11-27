@@ -44,6 +44,31 @@ Au premier chargement, l'appli:
 - Accueil: `/`
 - Les assets restent servis depuis `assets/...`
 
+### Admin
+
+- Connexion: `/login`
+- Tableau de bord: `/admin`
+- Modules: `/admin/news`, `/admin/programmes`, `/admin/formations`, `/admin/partners`
+
+Compte par défaut (créé automatiquement si vide):
+- Email: `admin@ifmap.ci`
+- Mot de passe: `admin123` (à modifier rapidement)
+
+### Pages publiques
+
+- Actualités: `/actualites`
+- Programmes: `/programmes`
+- Formations: `/formations`
+- Partenaires: `/partenaires`
+
+## Sécurité
+
+- CSRF: Tous les formulaires d'administration et de connexion intègrent un jeton (`csrf_field()`), vérifié côté serveur (`require_csrf()`).
+- Mot de passe: Hashé avec `password_hash()` (BCRYPT). Modification via `/admin/password`.
+- Sessions: Stockent uniquement `id` + `email` utilisateur.
+- Échappement: Les sorties HTML dynamiques passent par `htmlspecialchars()`.
+- À renforcer ensuite: Rôles utilisateurs, pagination, logs d'audit, rate limiting sur `/login`.
+
 ## Ajout de routes
 
 Dans `index.php`:

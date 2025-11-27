@@ -68,6 +68,22 @@ class Database
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB");
             },
+            'create_users_table' => function (PDO $pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    email VARCHAR(191) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB");
+                // Seed admin par défaut si vide
+                $count = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+                if ($count === 0) {
+                    $email = 'admin@ifmap.ci';
+                    $pass = password_hash('admin123', PASSWORD_BCRYPT);
+                    $st = $pdo->prepare('INSERT INTO users(email, password_hash) VALUES(?, ?)');
+                    $st->execute([$email, $pass]);
+                }
+            },
             'create_programmes_table' => function (PDO $pdo) {
                 $pdo->exec("CREATE TABLE IF NOT EXISTS programmes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
