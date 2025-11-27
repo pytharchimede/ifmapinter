@@ -23,7 +23,7 @@
   <header id="header">
     <div class="container nav">
       <div class="logo">
-        <img src="https://images.unsplash.com/photo-1606402179428-1bbf494459b9?w=200" alt="IFMAP Logo">
+        <img src="https://ifmap.ci/uploads/system/1fb9ea08a27e58c71dc6e639284b74eb.png" alt="IFMAP Logo">
         <span>IFMAP</span>
       </div>
 
