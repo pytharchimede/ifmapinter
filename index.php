@@ -1,248 +1,26 @@
-<!DOCTYPE html>
-<html lang="fr">
+<?php
+// Front controller + bootstrap minimal
+// Chargement autoload et helpers
+require __DIR__ . '/app/Core/Autoload.php';
+require __DIR__ . '/app/functions.php';
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IFMAP – Institut de Formation aux Métiers Professionnels</title>
+use App\Core\Router;
+use App\Core\Database;
+use App\Controllers\HomeController;
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="assets/css/style.css">
+// Config + BDD
+$cfg = config();
+Database::init($cfg);
+Database::migrate();
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+// Router
+$router = new Router();
 
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+// Routes (GET)
+$router->get('/', fn() => (new HomeController())->index());
 
-</head>
+// Exemple: autres pages statiques réutilisables si besoin
+// $router->get('/formations', fn () => view('formations', ['title' => 'Formations']));
 
-<body>
-
-  <!-- ================= HEADER ================= -->
-  <header id="header">
-    <div class="container nav">
-      <div class="logo">
-        <img src="https://ifmap.ci/uploads/system/1fb9ea08a27e58c71dc6e639284b74eb.png" alt="IFMAP Logo">
-        <span>IFMAP</span>
-      </div>
-
-      <nav>
-        <ul class="menu">
-          <li><a href="#institut">L’Institut</a></li>
-          <li><a href="#programmes">Programmes</a></li>
-          <li><a href="#formations">Formations</a></li>
-          <li><a href="#centres">Instituts & Centres</a></li>
-          <li><a href="#campus">Campus & Admissions</a></li>
-          <li><a href="#partenaires">Partenaires</a></li>
-          <li><a href="#news">Actualités</a></li>
-          <li><a href="#alumni">Alumni</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-
-        <div class="toggle" id="menu-toggle"><i class="fa fa-bars"></i></div>
-      </nav>
-    </div>
-  </header>
-
-
-  <!-- ================= HERO (PARALLAX) ================= -->
-  <section class="hero">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <h1 data-anim="fade">Institut IFMAP</h1>
-      <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
-      <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
-    </div>
-  </section>
-
-
-  <!-- ================= PROGRAMMES ================= -->
-  <section class="section" id="programmes">
-    <div class="container">
-      <div class="section-title">
-        <h2>Nos Programmes</h2>
-        <p>Une offre académique structurée comme les grandes institutions internationales.</p>
-      </div>
-
-      <div class="grid-3">
-
-        <div class="card">
-          <img src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b" alt="">
-          <div class="card-body">
-            <h3>Programme Fondamental</h3>
-            <p>Bases professionnelles et techniques pour débutants.</p>
-            <a href="#" class="btn-outline">En savoir plus</a>
-          </div>
-        </div>
-
-        <div class="card">
-          <img src="https://images.pexels.com/photos/3184639/pexels-photo-3184639.jpeg" alt="">
-          <div class="card-body">
-            <h3>Programme Technique & Industrie</h3>
-            <p>Énergie, électricité, mécanique, maintenance…</p>
-            <a href="#" class="btn-outline">En savoir plus</a>
-          </div>
-        </div>
-
-        <div class="card">
-          <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0" alt="">
-          <div class="card-body">
-            <h3>Management & Filières tertiaires</h3>
-            <p>Commerce, gestion, vente et services.</p>
-            <a href="#" class="btn-outline">En savoir plus</a>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ================= FORMATIONS ================= -->
-  <section class="section bg-light" id="formations">
-    <div class="container">
-
-      <div class="section-title">
-        <h2>Formations IFMAP</h2>
-        <p>Des formations professionnalisantes adaptées au marché africain.</p>
-      </div>
-
-      <div class="grid-4">
-
-        <div class="card-formation">
-          <img src="https://images.pexels.com/photos/9800038/pexels-photo-9800038.jpeg">
-          <h3>Pompiste / Station-service</h3>
-        </div>
-
-        <div class="card-formation">
-          <img src="https://images.pexels.com/photos/7567445/pexels-photo-7567445.jpeg">
-          <h3>Caissière & Rayonniste</h3>
-        </div>
-
-        <div class="card-formation">
-          <img src="https://images.unsplash.com/photo-1509395062183-67c5ad6faff9">
-          <h3>Technicien Solaire</h3>
-        </div>
-
-        <div class="card-formation">
-          <img src="https://images.pexels.com/photos/4484078/pexels-photo-4484078.jpeg">
-          <h3>Transport & Logistique</h3>
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ================= INSTITUTS & CENTRES ================= -->
-  <section class="section" id="centres">
-    <div class="container">
-      <div class="section-title">
-        <h2>Instituts & Centres IFMAP</h2>
-        <p>Une organisation structurée en pôles thématiques.</p>
-      </div>
-
-      <div class="grid-3">
-
-        <div class="centre">
-          <img src="https://images.pexels.com/photos/3182753/pexels-photo-3182753.jpeg">
-          <h3>Centre Énergie & Industrie</h3>
-          <p>Spécialiste des métiers techniques, industriels et durables.</p>
-        </div>
-
-        <div class="centre">
-          <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
-          <h3>Institut Commerce & Services</h3>
-          <p>Commerce, distribution, relation client et gestion.</p>
-        </div>
-
-        <div class="centre">
-          <img src="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg">
-          <h3>Institut Transport & Sécurité</h3>
-          <p>Logistique, sécurité routière, mobilité.</p>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ================= ACTUALITÉS (CARROUSEL) ================= -->
-  <section class="section bg-light" id="news">
-    <div class="container">
-
-      <div class="section-title">
-        <h2>Actualités</h2>
-        <p>Les dernières nouvelles de l’Institut IFMAP</p>
-      </div>
-
-      <div class="carousel" id="carousel">
-
-        <div class="carousel-item">
-          <img src="https://images.unsplash.com/photo-1498079022511-d15614cb1c02">
-          <div class="info">
-            <h3>Session 2025 ouverte</h3>
-            <p>Les pré-inscriptions sont disponibles.</p>
-          </div>
-        </div>
-
-        <div class="carousel-item">
-          <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
-          <div class="info">
-            <h3>Journée Portes Ouvertes</h3>
-            <p>Découvrez les métiers d’avenir.</p>
-          </div>
-        </div>
-
-        <div class="carousel-item">
-          <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0">
-          <div class="info">
-            <h3>Partenariat Entreprises</h3>
-            <p>De nouvelles opportunités pour nos diplômés.</p>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ================= PARTENAIRES ================= -->
-  <section class="section" id="partenaires">
-    <div class="container">
-
-      <div class="section-title">
-        <h2>Entreprises & Partenaires</h2>
-        <p>Ils nous accompagnent dans l’insertion professionnelle.</p>
-      </div>
-
-      <div class="partners">
-        <img src="https://dummyimage.com/140x70/003d7a/ffffff&text=Total">
-        <img src="https://dummyimage.com/140x70/002d5a/ffffff&text=Carrefour">
-        <img src="https://dummyimage.com/140x70/004b9a/ffffff&text=Orange">
-        <img src="https://dummyimage.com/140x70/0055cc/ffffff&text=Shell">
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ================= FOOTER ================= -->
-  <footer id="contact">
-    <div class="container">
-      <h3>Contact IFMAP</h3>
-      <p>Email : contact@ifmap.ci</p>
-      <p>Téléphone : +225 01 71 31 85 11</p>
-      <p>© 2025 IFMAP – Tous droits réservés</p>
-    </div>
-  </footer>
-
-  <!-- JS -->
-  <script src="assets/js/app.js"></script>
-
-</body>
-
-</html>
+// Dispatch
+$router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $_SERVER['REQUEST_URI'] ?? '/');

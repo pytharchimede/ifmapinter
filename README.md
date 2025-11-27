@@ -1,68 +1,60 @@
-# Shadcn-UI Template Usage Instructions
+# IFMAP Site
 
-## technology stack
+Structure modernisée avec routeur, vues, partials et initialisation automatique de la base MySQL.
 
-This project is built with:
+## Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- `index.php`: Front controller (routes + bootstrap)
+- `app/config.php`: Configuration (base de données, nom d'app)
+- `app/Core/Autoload.php`: Autoloader du namespace `App\\`
+- `app/Core/Router.php`: Routeur minimal (GET)
+- `app/Core/Database.php`: Connexion PDO + création automatique de la DB et tables
+- `app/functions.php`: Helpers (`config()`, `view()`, `base_url()`, `db()`)
+- `app/Controllers/HomeController.php`: Contrôleur d'accueil
+- `views/partials/header.php`, `views/partials/footer.php`: Partials réutilisables
+- `views/home.php`: Vue d'accueil (contenu existant)
+- `views/errors/404.php`, `views/errors/500.php`: Pages d'erreur
+- `assets/css/style.css`, `assets/js/app.js`: CSS/JS existants
+- `.htaccess`: Réécriture d'URL (URLs sans `.php`)
 
-All shadcn/ui components have been downloaded under `@/components/ui`.
+## Prérequis
 
-## File Structure
+- Apache (WAMP) avec `mod_rewrite` activé
+- PHP 8+ recommandé
+- MySQL/MariaDB accessible avec les identifiants fournis
 
-- `index.html` - HTML entry point
-- `vite.config.ts` - Vite configuration file
-- `tailwind.config.js` - Tailwind CSS configuration file
-- `package.json` - NPM dependencies and scripts
-- `src/app.tsx` - Root component of the project
-- `src/main.tsx` - Project entry point
-- `src/index.css` - Existing CSS configuration
-- `src/pages/Index.tsx` - Home page logic
+## Configuration BDD
 
-## Components
+Éditer `app/config.php` si besoin. Valeurs par défaut:
 
-- All shadcn/ui components are pre-downloaded and available at `@/components/ui`
-
-## Styling
-
-- Add global styles to `src/index.css` or create new CSS files as needed
-- Use Tailwind classes for styling components
-
-## Development
-
-- Import components from `@/components/ui` in your React components
-- Customize the UI by modifying the Tailwind configuration
-
-## Note
-
-- The `@/` path alias points to the `src/` directory
-- In your typescript code, don't re-export types that you're already importing
-
-# Commands
-
-**Install Dependencies**
-
-```shell
-pnpm i
+```
+host = localhost
+user = ifmapci_ulrich
+pass = @Succes2019
+name = ifmapci_website_db
+charset = utf8mb4
 ```
 
-**Add Dependencies**
+Au premier chargement, l'appli:
+- crée la base si elle n'existe pas
+- exécute des migrations idempotentes (`news`, `programmes`, `formations`, `partners`, `pages`)
 
-```shell
-pnpm add some_new_dependency
+## URLs
 
-**Start Preview**
+- Accueil: `/`
+- Les assets restent servis depuis `assets/...`
 
-```shell
-pnpm run dev
+## Ajout de routes
+
+Dans `index.php`:
+
+```php
+$router->get('/votre-chemin', fn () => view('votre-vue', ['title' => 'Titre']));
 ```
 
-**To build**
+Créer ensuite `views/votre-vue.php` en réutilisant `views/partials/header.php` et `views/partials/footer.php`.
 
-```shell
-pnpm run build
-```
+## Notes
+
+- Le serveur fourni comportait une coquille `locahost` -> corrigée en `localhost`.
+- Si WAMP ne pointe pas sur ce dossier, vérifiez que `.htaccess` est pris en compte (AllowOverride All).
