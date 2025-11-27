@@ -16,6 +16,22 @@ $cfg = config();
 Database::init($cfg);
 Database::migrate();
 
+// Seed initial carousels if empty (supports local assets URLs)
+try {
+  $exists = db()->query("SHOW TABLES LIKE 'carousels'")->fetchColumn();
+  if ($exists) {
+    $count = (int)db()->query('SELECT COUNT(*) FROM carousels')->fetchColumn();
+    if ($count === 0) {
+      $stmt = db()->prepare('INSERT INTO carousels (position, title, caption, description, button_text, button_url, background_url) VALUES (?,?,?,?,?,?,?)');
+      $stmt->execute([1, 'Institut IFMAP', 'Excellence académique', 'Nous formons les compétences de demain avec excellence, innovation et impact.', 'Découvrir nos Programmes', base_url('programmes'), base_url('assets/img/hero1.jpg')]);
+      $stmt->execute([2, 'Formations d’excellence', 'Parcours pro', 'Des parcours professionnalisants alignés sur les besoins des entreprises.', 'Voir les Formations', base_url('formations'), base_url('assets/img/hero2.jpg')]);
+      $stmt->execute([3, 'Entreprises partenaires', 'Réseau fort', 'Un réseau actif pour l’insertion et l’employabilité de nos diplômés.', 'Nos Partenaires', base_url('partenaires'), base_url('assets/img/hero3.jpg')]);
+    }
+  }
+} catch (Throwable $e) {
+  // ignore seeding errors
+}
+
 // Router
 $router = new Router();
 

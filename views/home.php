@@ -14,13 +14,17 @@
             }
             ?>
             <?php if (!empty($carousels)): ?>
-                <?php foreach ($carousels as $c): ?>
-                    <div class="hero-slide" style="background-image:url('<?= htmlspecialchars($c['background_url']) ?>')">
+                <?php foreach ($carousels as $i => $c): ?>
+                    <?php
+                    $bgClass = 'bg-' . (($i % 3) + 1);
+                    $hasBg = !empty($c['background_url']);
+                    ?>
+                    <div class="hero-slide <?= $hasBg ? '' : $bgClass ?>" <?= $hasBg ? "style=\"background-image:url('" . htmlspecialchars($c['background_url']) . "')\"" : '' ?>>
                         <div class="hero-content">
-                            <?php if (!empty($c['title'])): ?><h1><?= htmlspecialchars($c['title']) ?></h1><?php endif; ?>
-                            <?php if (!empty($c['description'])): ?><p><?= htmlspecialchars($c['description']) ?></p><?php endif; ?>
+                            <?php if (!empty($c['title'])): ?><h1 data-anim="fade"><?= htmlspecialchars($c['title']) ?></h1><?php endif; ?>
+                            <?php if (!empty($c['description'])): ?><p data-anim="fade-delayed"><?= htmlspecialchars($c['description']) ?></p><?php endif; ?>
                             <?php if (!empty($c['button_text'])): ?>
-                                <a href="<?= htmlspecialchars($c['button_url'] ?? '#') ?>" class="btn btn-primary"><?= htmlspecialchars($c['button_text']) ?></a>
+                                <a href="<?= htmlspecialchars($c['button_url'] ?? '#') ?>" class="btn-primary" data-anim="fade-delayed2"><?= htmlspecialchars($c['button_text']) ?></a>
                             <?php endif; ?>
                         </div>
                         <?php if (!empty($c['caption'])): ?>
@@ -32,23 +36,23 @@
                 <!-- Fallback statique si aucun carrousel configuré -->
                 <div class="hero-slide bg-1">
                     <div class="hero-content">
-                        <h1>Bienvenue à l'IFMAP</h1>
-                        <p>Excellence académique et innovation pour tous.</p>
-                        <a href="#programmes" class="btn btn-primary">Découvrir nos programmes</a>
+                        <h1 data-anim="fade">Institut IFMAP</h1>
+                        <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
+                        <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
                     </div>
                 </div>
                 <div class="hero-slide bg-2">
                     <div class="hero-content">
-                        <h1>Un campus vivant</h1>
-                        <p>Une communauté engagée et des événements inspirants.</p>
-                        <a href="#evenements" class="btn btn-primary">Voir les événements</a>
+                        <h1 data-anim="fade">Formations d’excellence</h1>
+                        <p data-anim="fade-delayed">Des parcours professionnalisants alignés sur les besoins des entreprises.</p>
+                        <a href="#formations" class="btn-primary" data-anim="fade-delayed2">Voir les Formations</a>
                     </div>
                 </div>
                 <div class="hero-slide bg-3">
                     <div class="hero-content">
-                        <h1>Carrières et Alumni</h1>
-                        <p>Des parcours réussis et un réseau fort.</p>
-                        <a href="<?= base_url('alumni') ?>" class="btn btn-primary">Alumni</a>
+                        <h1 data-anim="fade">Entreprises partenaires</h1>
+                        <p data-anim="fade-delayed">Un réseau actif pour l’insertion et l’employabilité de nos diplômés.</p>
+                        <a href="#partenaires" class="btn-primary" data-anim="fade-delayed2">Nos Partenaires</a>
                     </div>
                 </div>
             <?php endif; ?>
