@@ -184,6 +184,18 @@ class Database
                 $ins->execute([$name]);
             }
         }
+
+        // Patch: ajouter colonne `read` (lu) sur contact_messages si manquante
+        try {
+            $existsStmt = $pdo->prepare('SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+            $existsStmt->execute(['contact_messages', 'read']);
+            $colExists = (bool)$existsStmt->fetchColumn();
+            if (!$colExists) {
+                $pdo->exec('ALTER TABLE contact_messages ADD COLUMN `read` TINYINT(1) NOT NULL DEFAULT 0');
+            }
+        } catch (\PDOException $e) {
+            // Ignore silently if check fails; do not block migration
+        }
     }
 
     private static function fatal(string $message): void

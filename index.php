@@ -156,6 +156,7 @@ $router->post('/contact', function () {
 // Admin: Messages de contact
 $router->get('/admin/contacts', fn() => require_auth(fn() => (new AdminController())->contactsIndex()));
 $router->get('/admin/contacts/export.csv', fn() => require_auth(fn() => (new AdminController())->contactsExportCsv()));
+$router->post('/admin/contacts/mark', fn() => require_auth(fn() => (new AdminController())->contactsMark()));
 
 // Alumni: modèle de CV téléchargeable (HTML simple pour l'instant)
 $router->get('/alumni/cv-template', fn() => view('public/alumni_cv', [
@@ -182,6 +183,22 @@ $router->get('/alumni/cv-template/pdf', function () {
 $router->get('/alumni/cv-template/compact', fn() => view('public/alumni_cv_compact', [
   'title' => 'CV Alumni – Compact A4'
 ]));
+
+// Export PDF compact via Dompdf
+$router->get('/alumni/cv-template/compact/pdf', function () {
+  if (class_exists('Dompdf\\Dompdf')) {
+    ob_start();
+    echo view('public/alumni_cv_compact', ['title' => 'CV Alumni – Compact A4']);
+    $html = ob_get_clean();
+    $dompdf = new Dompdf\Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+    $dompdf->stream('cv_alumni_ifmap_compact.pdf', ['Attachment' => true]);
+    return '';
+  }
+  return view('public/alumni_cv_compact', ['title' => 'CV Alumni – Compact A4', 'dompdf_missing' => true]);
+});
 
 // Exemple: autres pages statiques réutilisables si besoin
 // $router->get('/formations', fn () => view('formations', ['title' => 'Formations']));

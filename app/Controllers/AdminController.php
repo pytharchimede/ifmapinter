@@ -343,6 +343,18 @@ class AdminController
         $title = 'Admin – Messages de contact';
         return view('admin/contacts/index', compact('title', 'items'));
     }
+    public function contactsMark(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $val = (int)($_POST['read'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('UPDATE contact_messages SET `read`=? WHERE id=?');
+            $st->execute([$val ? 1 : 0, $id]);
+        }
+        header('Location: ' . base_url('/admin/contacts'));
+        return '';
+    }
     public function contactsExportCsv(): string
     {
         // Filters: start, end (YYYY-MM-DD), q (search)
