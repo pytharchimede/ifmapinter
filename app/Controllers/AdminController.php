@@ -355,6 +355,161 @@ class AdminController
         header('Location: ' . base_url('/admin/contacts'));
         return '';
     }
+
+    // Carousels CRUD (max 3 items enforced in store)
+    public function carouselsIndex(): string
+    {
+        $items = db()->query('SELECT * FROM carousels ORDER BY position ASC, id ASC')->fetchAll();
+        $title = 'Admin – Carrousels';
+        return view('admin/carousels/index', compact('title', 'items'));
+    }
+    public function carouselsForm(): string
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $item = null;
+        if ($id) {
+            $st = db()->prepare('SELECT * FROM carousels WHERE id=?');
+            $st->execute([$id]);
+            $item = $st->fetch();
+        }
+        $title = $id ? 'Modifier carrousel' : 'Créer carrousel';
+        return view('admin/carousels/form', compact('title', 'item'));
+    }
+    public function carouselsStore(): string
+    {
+        require_csrf();
+        // Enforce max 3
+        $count = (int)db()->query('SELECT COUNT(*) FROM carousels')->fetchColumn();
+        if ($count >= 3) {
+            $title = 'Admin – Carrousels';
+            $items = db()->query('SELECT * FROM carousels ORDER BY position ASC')->fetchAll();
+            $error = 'Maximum de 3 carrousels atteint.';
+            return view('admin/carousels/index', compact('title', 'items', 'error'));
+        }
+        $position = max(1, (int)($_POST['position'] ?? 1));
+        $titleTxt = substr(trim($_POST['title'] ?? ''), 0, 120);
+        $caption = substr(trim($_POST['caption'] ?? ''), 0, 200);
+        $description = substr(trim($_POST['description'] ?? ''), 0, 240);
+        $button_text = substr(trim($_POST['button_text'] ?? ''), 0, 60);
+        $button_url = trim($_POST['button_url'] ?? '');
+        $background_url = trim($_POST['background_url'] ?? '');
+        // Upload local image (validate type/size)
+        if (!empty($_FILES['background_file']['name'])) {
+            $upl = $_FILES['background_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024; // 2MB
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/carousels';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('c_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        // Convert to WebP for jpg/png if possible
+                        $background_url = base_url('uploads/carousels/' . $fname);
+                        $this->convertToWebpIfPossible($dest, $ext, $baseDir, $background_url);
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO carousels(position,title,caption,description,button_text,button_url,background_url) VALUES(?,?,?,?,?,?,?)');
+        $st->execute([$position, $titleTxt, $caption, $description, $button_text, $button_url, $background_url]);
+        header('Location: ' . base_url('/admin/carousels'));
+        return '';
+    }
+    public function carouselsUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $position = max(1, (int)($_POST['position'] ?? 1));
+        $titleTxt = substr(trim($_POST['title'] ?? ''), 0, 120);
+        $caption = substr(trim($_POST['caption'] ?? ''), 0, 200);
+        $description = substr(trim($_POST['description'] ?? ''), 0, 240);
+        $button_text = substr(trim($_POST['button_text'] ?? ''), 0, 60);
+        $button_url = trim($_POST['button_url'] ?? '');
+        $background_url = trim($_POST['background_url'] ?? '');
+        if (!empty($_FILES['background_file']['name'])) {
+            $upl = $_FILES['background_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024; // 2MB
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/carousels';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('c_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $background_url = base_url('uploads/carousels/' . $fname);
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE carousels SET position=?, title=?, caption=?, description=?, button_text=?, button_url=?, background_url=? WHERE id=?');
+        $st->execute([$position, $titleTxt, $caption, $description, $button_text, $button_url, $background_url, $id]);
+        header('Location: ' . base_url('/admin/carousels'));
+        return '';
+    }
+    public function carouselsDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('DELETE FROM carousels WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/carousels'));
+        return '';
+    }
+
+    private function convertToWebpIfPossible(string $sourcePath, string $ext, string $baseDir, string &$backgroundUrl): void
+    {
+        $lower = strtolower($ext);
+        if ($lower === 'webp') return;
+        // Try GD
+        try {
+            $img = null;
+            if ($lower === 'jpg' || $lower === 'jpeg') {
+                if (function_exists('imagecreatefromjpeg')) $img = @imagecreatefromjpeg($sourcePath);
+            } elseif ($lower === 'png') {
+                if (function_exists('imagecreatefrompng')) $img = @imagecreatefrompng($sourcePath);
+            }
+            if ($img && function_exists('imagewebp')) {
+                $webpName = pathinfo($sourcePath, PATHINFO_FILENAME) . '.webp';
+                $webpPath = $baseDir . '/' . $webpName;
+                // quality ~80
+                if (@imagepalettetotruecolor($img)) { /* make sure true color */
+                }
+                @imagealphablending($img, true);
+                @imagesavealpha($img, true);
+                if (@imagewebp($img, $webpPath, 80)) {
+                    $backgroundUrl = base_url('uploads/carousels/' . $webpName);
+                }
+                imagedestroy($img);
+            }
+        } catch (\Throwable $e) {
+            // silently ignore conversion errors
+        }
+    }
+
+    // AJAX ordering
+    public function carouselsOrder(): string
+    {
+        require_csrf();
+        $order = $_POST['order'] ?? [];
+        if (is_array($order)) {
+            $pos = 1;
+            foreach ($order as $id) {
+                $idInt = (int)$id;
+                $st = db()->prepare('UPDATE carousels SET position=? WHERE id=?');
+                $st->execute([$pos, $idInt]);
+                $pos++;
+            }
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true]);
+        return '';
+    }
     public function contactsExportCsv(): string
     {
         // Filters: start, end (YYYY-MM-DD), q (search)

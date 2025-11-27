@@ -15,6 +15,15 @@ body.admin{background:var(--admin-bg); color:var(--admin-text); font-family:'Pop
 .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem}
 @media(max-width:900px){.grid-2{grid-template-columns:1fr}}
 
+/* App layout with left sidebar */
+.admin-app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+.admin-sidebar{background:#0b1220;border-right:1px solid var(--admin-border);padding:1rem;position:sticky;top:0;height:100vh}
+.admin-side-nav{display:flex;flex-direction:column;gap:.3rem;margin-top:1rem}
+.admin-side-nav a{color:var(--admin-muted);text-decoration:none;padding:.55rem .7rem;border-radius:10px}
+.admin-side-nav a:hover,.admin-side-nav a.active{background:#1f2937;color:#fff}
+.nav-label{margin-top:.8rem;color:#6b7280;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}
+.admin-main{padding:2rem}
+
 /* Login */
 .login-wrap{min-height:100vh;display:grid;grid-template-columns: 1.2fr 1fr}
 .login-hero{background:radial-gradient(800px circle at 0% 0%, rgba(75,126,236,.25),transparent 60%), linear-gradient(135deg,#0b1220,#0f172a 50%,#111827); display:flex; align-items:center; justify-content:center; padding:2rem}

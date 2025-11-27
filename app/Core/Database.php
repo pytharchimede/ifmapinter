@@ -84,6 +84,19 @@ class Database
                     $st->execute([$email, $pass]);
                 }
             },
+            'create_carousels_table' => function (PDO $pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS carousels (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        position INT NOT NULL DEFAULT 1,
+                        title VARCHAR(120) NULL,
+                        caption VARCHAR(200) NULL,
+                        description VARCHAR(240) NULL,
+                        button_text VARCHAR(60) NULL,
+                        button_url VARCHAR(255) NULL,
+                        background_url VARCHAR(255) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB");
+            },
             'create_programmes_table' => function (PDO $pdo) {
                 $pdo->exec("CREATE TABLE IF NOT EXISTS programmes (
                     id INT AUTO_INCREMENT PRIMARY KEY,

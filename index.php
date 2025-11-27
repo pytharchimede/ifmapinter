@@ -158,6 +158,15 @@ $router->get('/admin/contacts', fn() => require_auth(fn() => (new AdminControlle
 $router->get('/admin/contacts/export.csv', fn() => require_auth(fn() => (new AdminController())->contactsExportCsv()));
 $router->post('/admin/contacts/mark', fn() => require_auth(fn() => (new AdminController())->contactsMark()));
 
+// Admin Carousels
+$router->get('/admin/carousels', fn() => require_auth(fn() => (new AdminController())->carouselsIndex()));
+$router->get('/admin/carousels/create', fn() => require_auth(fn() => (new AdminController())->carouselsForm()));
+$router->post('/admin/carousels/create', fn() => require_auth(fn() => (new AdminController())->carouselsStore()));
+$router->get('/admin/carousels/edit', fn() => require_auth(fn() => (new AdminController())->carouselsForm()));
+$router->post('/admin/carousels/edit', fn() => require_auth(fn() => (new AdminController())->carouselsUpdate()));
+$router->get('/admin/carousels/delete', fn() => require_auth(fn() => (new AdminController())->carouselsDelete()));
+$router->post('/admin/carousels/order', fn() => require_auth(fn() => (new AdminController())->carouselsOrder()));
+
 // Alumni: modèle de CV téléchargeable (HTML simple pour l'instant)
 $router->get('/alumni/cv-template', fn() => view('public/alumni_cv', [
   'title' => 'Modèle de CV Alumni'

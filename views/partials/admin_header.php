@@ -10,23 +10,16 @@
 </head>
 
 <body class="admin">
-    <header class="admin-header">
-        <div class="wrap">
+    <div class="admin-app">
+        <aside class="admin-sidebar">
             <div class="admin-brand">
                 <div class="logo">IF</div>
                 <span>IFMAP Admin</span>
             </div>
-            <nav class="admin-nav">
-                <a href="<?= base_url('admin') ?>" class="<?= ($_SERVER['REQUEST_URI'] ?? '') === base_url('admin') ? 'active' : '' ?>">Dashboard</a>
-                <a href="<?= base_url('admin/news') ?>">Actualités</a>
-                <a href="<?= base_url('admin/programmes') ?>">Programmes</a>
-                <a href="<?= base_url('admin/formations') ?>">Formations</a>
-                <a href="<?= base_url('admin/partners') ?>">Partenaires</a>
-                <a href="<?= base_url('admin/media') ?>">Médias</a>
-                <a href="<?= base_url('admin/contacts') ?>">Contacts</a>
-                <a href="<?= base_url('admin/password') ?>">Sécurité</a>
-                <a href="<?= base_url('logout') ?>">Déconnexion</a>
+            <nav class="admin-side-nav">
+                <a href="<?= base_url('admin') ?>">Dashboard</a>
+                <span class="nav-label">Accueil</span>
+                <a href="<?= base_url('admin/carousels') ?>">Carrousels</a>
             </nav>
-        </div>
-    </header>
-    <main class="admin-main">
+        </aside>
+        <main class="admin-main">

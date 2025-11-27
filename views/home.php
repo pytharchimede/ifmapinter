@@ -5,27 +5,53 @@
     <div class="hero-overlay"></div>
     <div class="hero-carousel" id="hero-carousel">
         <div class="hero-track">
-            <div class="hero-slide bg-1">
-                <div class="hero-content">
-                    <h1 data-anim="fade">Institut IFMAP</h1>
-                    <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
-                    <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
+            <?php
+            $carousels = [];
+            try {
+                $carousels = db()->query('SELECT * FROM carousels ORDER BY position ASC')->fetchAll();
+            } catch (Throwable $e) {
+                $carousels = [];
+            }
+            ?>
+            <?php if (!empty($carousels)): ?>
+                <?php foreach ($carousels as $c): ?>
+                    <div class="hero-slide" style="background-image:url('<?= htmlspecialchars($c['background_url']) ?>')">
+                        <div class="hero-content">
+                            <?php if (!empty($c['title'])): ?><h1><?= htmlspecialchars($c['title']) ?></h1><?php endif; ?>
+                            <?php if (!empty($c['description'])): ?><p><?= htmlspecialchars($c['description']) ?></p><?php endif; ?>
+                            <?php if (!empty($c['button_text'])): ?>
+                                <a href="<?= htmlspecialchars($c['button_url'] ?? '#') ?>" class="btn btn-primary"><?= htmlspecialchars($c['button_text']) ?></a>
+                            <?php endif; ?>
+                        </div>
+                        <?php if (!empty($c['caption'])): ?>
+                            <div class="hero-caption"><?= htmlspecialchars($c['caption']) ?></div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <!-- Fallback statique si aucun carrousel configuré -->
+                <div class="hero-slide bg-1">
+                    <div class="hero-content">
+                        <h1>Bienvenue à l'IFMAP</h1>
+                        <p>Excellence académique et innovation pour tous.</p>
+                        <a href="#programmes" class="btn btn-primary">Découvrir nos programmes</a>
+                    </div>
                 </div>
-            </div>
-            <div class="hero-slide bg-2">
-                <div class="hero-content">
-                    <h1 data-anim="fade">Formations d’excellence</h1>
-                    <p data-anim="fade-delayed">Des parcours professionnalisants alignés sur les besoins des entreprises.</p>
-                    <a href="#formations" class="btn-primary" data-anim="fade-delayed2">Voir les Formations</a>
+                <div class="hero-slide bg-2">
+                    <div class="hero-content">
+                        <h1>Un campus vivant</h1>
+                        <p>Une communauté engagée et des événements inspirants.</p>
+                        <a href="#evenements" class="btn btn-primary">Voir les événements</a>
+                    </div>
                 </div>
-            </div>
-            <div class="hero-slide bg-3">
-                <div class="hero-content">
-                    <h1 data-anim="fade">Entreprises partenaires</h1>
-                    <p data-anim="fade-delayed">Un réseau actif pour l’insertion et l’employabilité de nos diplômés.</p>
-                    <a href="#partenaires" class="btn-primary" data-anim="fade-delayed2">Nos Partenaires</a>
+                <div class="hero-slide bg-3">
+                    <div class="hero-content">
+                        <h1>Carrières et Alumni</h1>
+                        <p>Des parcours réussis et un réseau fort.</p>
+                        <a href="<?= base_url('alumni') ?>" class="btn btn-primary">Alumni</a>
+                    </div>
                 </div>
-            </div>
+            <?php endif; ?>
         </div>
         <button class="hero-arrow left" aria-label="Précédent">❮</button>
         <button class="hero-arrow right" aria-label="Suivant">❯</button>
