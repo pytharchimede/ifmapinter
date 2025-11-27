@@ -3,18 +3,33 @@
 <!-- ================= HERO (PARALLAX) ================= -->
 <section class="hero">
     <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1 data-anim="fade">Institut IFMAP</h1>
-        <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
-        <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
-        <?php if (!empty($stats)): ?>
-            <div class="stats" data-anim="fade-delayed2">
-                <div class="stat"><span class="counter" data-target="<?= (int)$stats['programmes'] ?>">0</span><small>Programmes</small></div>
-                <div class="stat"><span class="counter" data-target="<?= (int)$stats['formations'] ?>">0</span><small>Formations</small></div>
-                <div class="stat"><span class="counter" data-target="<?= (int)$stats['partners'] ?>">0</span><small>Partenaires</small></div>
-                <div class="stat"><span class="counter" data-target="<?= (int)$stats['news'] ?>">0</span><small>Actualités</small></div>
+    <div class="hero-carousel" id="hero-carousel">
+        <div class="hero-track">
+            <div class="hero-slide bg-1">
+                <div class="hero-content">
+                    <h1 data-anim="fade">Institut IFMAP</h1>
+                    <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
+                    <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
+                </div>
             </div>
-        <?php endif; ?>
+            <div class="hero-slide bg-2">
+                <div class="hero-content">
+                    <h1 data-anim="fade">Formations d’excellence</h1>
+                    <p data-anim="fade-delayed">Des parcours professionnalisants alignés sur les besoins des entreprises.</p>
+                    <a href="#formations" class="btn-primary" data-anim="fade-delayed2">Voir les Formations</a>
+                </div>
+            </div>
+            <div class="hero-slide bg-3">
+                <div class="hero-content">
+                    <h1 data-anim="fade">Entreprises partenaires</h1>
+                    <p data-anim="fade-delayed">Un réseau actif pour l’insertion et l’employabilité de nos diplômés.</p>
+                    <a href="#partenaires" class="btn-primary" data-anim="fade-delayed2">Nos Partenaires</a>
+                </div>
+            </div>
+        </div>
+        <button class="hero-arrow left" aria-label="Précédent">❮</button>
+        <button class="hero-arrow right" aria-label="Suivant">❯</button>
+        <div class="hero-dots"></div>
     </div>
 </section>
 

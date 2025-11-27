@@ -29,6 +29,52 @@ window.addEventListener("scroll", () => {
   });
 });
 
+// ================= HERO CAROUSEL =================
+const heroCarousel = document.getElementById("hero-carousel");
+if (heroCarousel) {
+  const track = heroCarousel.querySelector(".hero-track");
+  const slides = [...heroCarousel.querySelectorAll(".hero-slide")];
+  const left = heroCarousel.querySelector(".hero-arrow.left");
+  const right = heroCarousel.querySelector(".hero-arrow.right");
+  const dotsWrap = heroCarousel.querySelector(".hero-dots");
+  let current = 0;
+
+  // dots
+  slides.forEach((_, i) => {
+    const d = document.createElement("div");
+    d.className = "hero-dot" + (i === 0 ? " active" : "");
+    d.dataset.index = i;
+    dotsWrap.appendChild(d);
+  });
+
+  function goTo(index) {
+    current = (index + slides.length) % slides.length;
+    track.style.transform = `translateX(${-current * 100}%)`;
+    dotsWrap
+      .querySelectorAll(".hero-dot")
+      .forEach((dot) => dot.classList.remove("active"));
+    dotsWrap
+      .querySelector(`.hero-dot[data-index="${current}"]`)
+      .classList.add("active");
+  }
+
+  left.addEventListener("click", () => goTo(current - 1));
+  right.addEventListener("click", () => goTo(current + 1));
+  dotsWrap.addEventListener("click", (e) => {
+    const d = e.target.closest(".hero-dot");
+    if (!d) return;
+    goTo(parseInt(d.dataset.index, 10));
+  });
+
+  // autoplay
+  let timer = setInterval(() => goTo(current + 1), 7000);
+  heroCarousel.addEventListener("mouseenter", () => clearInterval(timer));
+  heroCarousel.addEventListener(
+    "mouseleave",
+    () => (timer = setInterval(() => goTo(current + 1), 7000))
+  );
+}
+
 // ================= CAROUSEL (Auto + Drag + Dots) =================
 const carousel = document.getElementById("carousel");
 if (carousel) {
