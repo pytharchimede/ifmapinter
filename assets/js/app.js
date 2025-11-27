@@ -253,3 +253,99 @@ if (modal) {
     }
   });
 }
+
+// ================= GALLERY FILTERS =================
+const galleryGrid = document.getElementById("gallery-grid");
+if (galleryGrid) {
+  const filterButtons = document.querySelectorAll(".gallery-filters button");
+  const categorySelect = document.getElementById('gallery-category');
+  const loader = document.getElementById('gallery-loader');
+  let loading = false; let lastPageLoaded = 1; let endReached = false; let currentType='all'; let currentCategory='';
+  filterButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentType = btn.dataset.filter;
+      resetGallery();
+      fetchNextPage(true);
+    });
+  });
+  if (categorySelect) {
+    categorySelect.addEventListener('change', () => {
+      currentCategory = categorySelect.value;
+      resetGallery();
+      fetchNextPage(true);
+    });
+  }
+  function resetGallery(){
+    galleryGrid.innerHTML='';
+    lastPageLoaded=0; endReached=false;
+  }
+  async function fetchNextPage(initial){
+    if (loading||endReached) return; loading=true; loader.style.display='block';
+    const nextPage = lastPageLoaded + 1;
+    const params = new URLSearchParams({page: nextPage, type: currentType, category: currentCategory});
+    try {
+      const res = await fetch(baseUrl('galerie/data') + '?' + params.toString());
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length===0){ endReached=true; }
+      data.forEach(m => {
+        const div = document.createElement('div');
+        div.className='gallery-item';
+        div.dataset.type=m.type;
+        div.title=m.title;
+        if (m.type==='video') {
+          if (m.url.match(/youtube|vimeo/)) {
+            div.innerHTML = `<iframe loading="lazy" src="${m.url}" frameborder="0" allowfullscreen></iframe><div class="overlay"></div><div class="caption">${m.title}</div>`;
+          } else {
+            div.innerHTML = `<div class="video-wrapper" style="position:relative;height:200px;overflow:hidden;background:#000">`+
+                            `<video preload="metadata" src="${m.url}"${m.thumb_url?` poster='${m.thumb_url}'`:''} style="width:100%;height:100%;object-fit:cover"></video>`+
+                            `<button class="vplay" style="position:absolute;inset:0;margin:auto;width:64px;height:64px;border:none;border-radius:50%;background:rgba(255,255,255,.3);backdrop-filter:blur(4px);cursor:pointer;font-size:1.6rem;color:#fff">▶</button>`+
+                            `</div><div class="overlay"></div><div class="caption">${m.title}</div>`;
+          }
+        } else {
+          div.innerHTML = `<img loading="lazy" src="${m.url}" alt="${m.title}"><div class="overlay"></div><div class="caption">${m.title}</div>`;
+        }
+        galleryGrid.appendChild(div);
+      });
+      lastPageLoaded = nextPage;
+    } catch(e){ console.error(e); }
+    loader.style.display='none'; loading=false;
+  }
+  // Infinite scroll
+  window.addEventListener('scroll', () => {
+    if (endReached) return;
+    const rect = loader.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 200) {
+      fetchNextPage();
+    }
+  });
+  // Video player custom controls
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.vplay');
+    if (!btn) return;
+    const wrapper = btn.parentElement;
+    const vid = wrapper.querySelector('video');
+    if (!vid) return;
+    if (vid.paused){ vid.play(); btn.style.display='none'; } else { vid.pause(); btn.style.display=''; }
+  });
+  // Initial load first page after existing server-rendered items
+  lastPageLoaded=1; // server rendered page 1 slice
+  fetchNextPage();
+}
+  // Lightbox via modal for images
+  galleryGrid.addEventListener("click", (e) => {
+    const item = e.target.closest(".gallery-item");
+    if (!item) return;
+    if (item.querySelector("img")) {
+      const src = item.querySelector("img").getAttribute("src");
+      const title = item.getAttribute("title") || "";
+      if (modal) {
+        const html = `<h2>${title}</h2><img src="${src}" style="width:100%;border-radius:12px;max-height:70vh;object-fit:cover">`;
+        modal.querySelector(".modal-content").innerHTML = html;
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      }
+    }
+  });
+}

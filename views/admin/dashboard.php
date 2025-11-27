@@ -1,31 +1,37 @@
-<?php include __DIR__ . '/../partials/header.php'; ?>
+<?php include __DIR__ . '/../partials/admin_header.php'; ?>
 
-<section class="section">
-    <div class="container">
-        <h2>Tableau de bord</h2>
-        <p>Bienvenue <?= htmlspecialchars(current_user()['email'] ?? '') ?>.</p>
-
-        <div class="grid-4">
-            <a class="card" href="<?= base_url('/admin/news') ?>" style="padding:20px;display:block;">
-                <h3>Actualités</h3>
-                <p>Gérer les news</p>
-            </a>
-            <a class="card" href="<?= base_url('/admin/programmes') ?>" style="padding:20px;display:block;">
-                <h3>Programmes</h3>
-                <p>Gérer les programmes</p>
-            </a>
-            <a class="card" href="<?= base_url('/admin/formations') ?>" style="padding:20px;display:block;">
-                <h3>Formations</h3>
-                <p>Gérer les formations</p>
-            </a>
-            <a class="card" href="<?= base_url('/admin/partners') ?>" style="padding:20px;display:block;">
-                <h3>Partenaires</h3>
-                <p>Gérer les partenaires</p>
-            </a>
+<div class="grid-2">
+    <div class="admin-card">
+        <h3>Bienvenue</h3>
+        <p>Bonjour <?= htmlspecialchars(current_user()['email'] ?? '') ?>, voici vos accès rapides.</p>
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.6rem;">
+            <a class="btn-admin" href="<?= base_url('admin/news') ?>">Actualités</a>
+            <a class="btn-admin" href="<?= base_url('admin/programmes') ?>">Programmes</a>
+            <a class="btn-admin" href="<?= base_url('admin/formations') ?>">Formations</a>
+            <a class="btn-admin" href="<?= base_url('admin/partners') ?>">Partenaires</a>
         </div>
-
-        <p style="margin-top:20px;"><a href="<?= base_url('/logout') ?>">Se déconnecter</a></p>
     </div>
-</section>
+    <div class="admin-card">
+        <h3>Statistiques</h3>
+        <table class="table">
+            <tr>
+                <th>Programmes</th>
+                <td><?= (int)db()->query('SELECT COUNT(*) FROM programmes')->fetchColumn() ?></td>
+            </tr>
+            <tr>
+                <th>Formations</th>
+                <td><?= (int)db()->query('SELECT COUNT(*) FROM formations')->fetchColumn() ?></td>
+            </tr>
+            <tr>
+                <th>Partenaires</th>
+                <td><?= (int)db()->query('SELECT COUNT(*) FROM partners')->fetchColumn() ?></td>
+            </tr>
+            <tr>
+                <th>Actualités</th>
+                <td><?= (int)db()->query('SELECT COUNT(*) FROM news')->fetchColumn() ?></td>
+            </tr>
+        </table>
+    </div>
+</div>
 
-<?php include __DIR__ . '/../partials/footer.php'; ?>
+<?php include __DIR__ . '/../partials/admin_footer.php'; ?>

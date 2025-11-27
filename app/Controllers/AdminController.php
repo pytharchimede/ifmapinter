@@ -231,6 +231,111 @@ class AdminController
         header('Location: ' . base_url('/admin/partners'));
         return '';
     }
+    // Media (Galerie)
+    public function mediaIndex(): string
+    {
+        $items = db()->query('SELECT * FROM media ORDER BY id DESC')->fetchAll();
+        $title = 'Admin – Médias';
+        return view('admin/media/index', compact('title', 'items'));
+    }
+    public function mediaForm(): string
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $item = null;
+        if ($id) {
+            $st = db()->prepare('SELECT * FROM media WHERE id=?');
+            $st->execute([$id]);
+            $item = $st->fetch();
+        }
+        $title = $id ? 'Modifier Média' : 'Ajouter Média';
+        return view('admin/media/form', compact('title', 'item'));
+    }
+    public function mediaStore(): string
+    {
+        require_csrf();
+        $title = trim($_POST['title'] ?? '');
+        $type = $_POST['type'] === 'video-file' ? 'video' : ($_POST['type'] === 'video' ? 'video' : 'image');
+        $category = trim($_POST['category'] ?? '');
+        $tags = trim($_POST['tags'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $poster = trim($_POST['poster_url'] ?? '');
+        // Upload fichier si présent
+        if (!empty($_FILES['file']['name'])) {
+            $upl = $_FILES['file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $allowedVid = ['mp4'];
+                $baseDir = __DIR__ . '/../../uploads/media';
+                if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                $fname = uniqid('m_') . '.' . $ext;
+                $dest = $baseDir . '/' . $fname;
+                if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                    $publicPath = base_url('uploads/media/' . $fname);
+                    if (in_array($ext, $allowedVid)) {
+                        $type = 'video';
+                        $url = $publicPath;
+                    } elseif (in_array($ext, $allowedImg)) {
+                        $type = 'image';
+                        $url = $publicPath;
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO media(title,type,url,thumb_url,description,category,tags) VALUES(?,?,?,?,?,?,?)');
+        $st->execute([$title, $type, $url, $poster, $description, $category, $tags]);
+        header('Location: ' . base_url('/admin/media'));
+        return '';
+    }
+    public function mediaUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $type = $_POST['type'] === 'video-file' ? 'video' : ($_POST['type'] === 'video' ? 'video' : 'image');
+        $category = trim($_POST['category'] ?? '');
+        $tags = trim($_POST['tags'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $poster = trim($_POST['poster_url'] ?? '');
+        if (!empty($_FILES['file']['name'])) {
+            $upl = $_FILES['file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $allowedVid = ['mp4'];
+                $baseDir = __DIR__ . '/../../uploads/media';
+                if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                $fname = uniqid('m_') . '.' . $ext;
+                $dest = $baseDir . '/' . $fname;
+                if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                    $publicPath = base_url('uploads/media/' . $fname);
+                    if (in_array($ext, $allowedVid)) {
+                        $type = 'video';
+                        $url = $publicPath;
+                    } elseif (in_array($ext, $allowedImg)) {
+                        $type = 'image';
+                        $url = $publicPath;
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE media SET title=?, type=?, url=?, thumb_url=?, description=?, category=?, tags=? WHERE id=?');
+        $st->execute([$title, $type, $url, $poster, $description, $category, $tags, $id]);
+        header('Location: ' . base_url('/admin/media'));
+        return '';
+    }
+    public function mediaDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('DELETE FROM media WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/media'));
+        return '';
+    }
     // Changement mot de passe
     public function passwordForm(): string
     {

@@ -141,6 +141,27 @@ class Database
                     avatar_url VARCHAR(255) NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB");
+            },
+            'create_media_table' => function (PDO $pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS media (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(191) NOT NULL,
+                    type ENUM('image','video') NOT NULL DEFAULT 'image',
+                    url VARCHAR(255) NOT NULL,
+                    thumb_url VARCHAR(255) NULL,
+                    description TEXT NULL,
+                    category VARCHAR(191) NULL,
+                    tags VARCHAR(255) NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB");
+                $count = (int)$pdo->query('SELECT COUNT(*) FROM media')->fetchColumn();
+                if ($count === 0) {
+                    $seed = $pdo->prepare('INSERT INTO media(title,type,url,thumb_url,description) VALUES (?,?,?,?,?)');
+                    $seed->execute(['Campus Énergie', 'image', 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80', null, 'Centre technique en activité']);
+                    $seed->execute(['Atelier Solaire', 'image', 'https://images.unsplash.com/photo-1509395062183-67c5ad6faff9?auto=format&fit=crop&w=1200&q=80', null, 'Formation panneaux photovoltaïques']);
+                    $seed->execute(['Partenariat Entreprise', 'image', 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02?auto=format&fit=crop&w=1200&q=80', null, 'Signature partenariat']);
+                    $seed->execute(['Présentation Programme', 'video', 'https://www.youtube.com/embed/dQw4w9WgXcQ', null, 'Capsule vidéo présentation IFMAP']);
+                }
             }
         ];
 

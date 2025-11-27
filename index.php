@@ -56,6 +56,12 @@ $router->post('/admin/partners/create', fn() => require_auth(fn() => (new AdminC
 $router->get('/admin/partners/edit', fn() => require_auth(fn() => (new AdminController())->partnersForm()));
 $router->post('/admin/partners/edit', fn() => require_auth(fn() => (new AdminController())->partnersUpdate()));
 $router->get('/admin/partners/delete', fn() => require_auth(fn() => (new AdminController())->partnersDelete()));
+$router->get('/admin/media', fn() => require_auth(fn() => (new AdminController())->mediaIndex()));
+$router->get('/admin/media/create', fn() => require_auth(fn() => (new AdminController())->mediaForm()));
+$router->post('/admin/media/create', fn() => require_auth(fn() => (new AdminController())->mediaStore()));
+$router->get('/admin/media/edit', fn() => require_auth(fn() => (new AdminController())->mediaForm()));
+$router->post('/admin/media/edit', fn() => require_auth(fn() => (new AdminController())->mediaUpdate()));
+$router->get('/admin/media/delete', fn() => require_auth(fn() => (new AdminController())->mediaDelete()));
 
 // Admin sécurité
 $router->get('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordForm()));
@@ -87,6 +93,34 @@ $router->get('/partenaires', fn() => view('public/partners', [
   'title' => 'Partenaires',
   'items' => db()->query('SELECT * FROM partners ORDER BY id DESC')->fetchAll()
 ]));
+$router->get('/galerie', fn() => view('public/gallery', [
+  'title' => 'Galerie',
+  'media' => db()->query('SELECT * FROM media ORDER BY id DESC')->fetchAll()
+]));
+$router->get('/galerie/data', function () {
+  $page = max(1, (int)($_GET['page'] ?? 1));
+  $type = $_GET['type'] ?? 'all';
+  $category = trim($_GET['category'] ?? '');
+  $limit = 12;
+  $offset = ($page - 1) * $limit;
+  $sql = 'SELECT * FROM media WHERE 1';
+  $params = [];
+  if ($type !== 'all') {
+    $sql .= ' AND type=?';
+    $params[] = $type;
+  }
+  if ($category !== '') {
+    $sql .= ' AND category=?';
+    $params[] = $category;
+  }
+  $sql .= ' ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
+  $st = db()->prepare($sql);
+  $st->execute($params);
+  $rows = $st->fetchAll();
+  header('Content-Type: application/json');
+  echo json_encode($rows);
+  return '';
+});
 
 // Exemple: autres pages statiques réutilisables si besoin
 // $router->get('/formations', fn () => view('formations', ['title' => 'Formations']));

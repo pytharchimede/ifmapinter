@@ -32,12 +32,13 @@
                     <li><a href="<?= base_url('#institut') ?>">L’Institut</a></li>
                     <li><a href="<?= base_url('#programmes') ?>">Programmes</a></li>
                     <li><a href="<?= base_url('#formations') ?>">Formations</a></li>
-                    <li><a href="<?= base_url('#centres') ?>">Instituts</a></li>
+                    <li><a href="<?= base_url('#centres') ?>">Ecoles</a></li>
                     <li><a href="<?= base_url('#campus') ?>">Campus</a></li>
                     <li><a href="<?= base_url('#partenaires') ?>">Partenaires</a></li>
                     <li><a href="<?= base_url('#news') ?>">Actualités</a></li>
                     <li><a href="<?= base_url('#alumni') ?>">Alumni</a></li>
                     <li><a href="<?= base_url('#contact') ?>">Contact</a></li>
+                    <li><a href="<?= base_url('galerie') ?>">Galerie</a></li>
                 </ul>
                 <div class="actions" style="display:flex; align-items:center; gap:1rem;">
                     <button class="theme-toggle" aria-label="Basculer le thème">🌓</button>

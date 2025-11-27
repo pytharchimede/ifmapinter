@@ -1,28 +1,44 @@
-<?php include __DIR__ . '/../partials/header.php'; ?>
+<!DOCTYPE html>
+<html lang="fr">
 
-<section class="section">
-    <div class="container" style="max-width:480px;">
-        <h2>Connexion administrateur</h2>
-        <?php if (!empty($error)): ?>
-            <p style="color:red;"><?= htmlspecialchars($error) ?></p>
-        <?php endif; ?>
-        <form method="post" action="<?= base_url('/login') ?>" class="card" style="padding:20px;">
-            <?= csrf_field() ?>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" required placeholder="admin@ifmap.ci" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFMAP – Connexion</title>
+    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="admin">
+    <div class="login-wrap">
+        <div class="login-hero">
+            <div class="inner">
+                <h1>Bienvenue sur IFMAP Admin</h1>
+                <p>Gérez le site en toute simplicité dans une interface moderne et sécurisée.</p>
             </div>
-            <div class="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" required placeholder="••••••••" />
-            </div>
-            <button class="btn-primary" type="submit">Se connecter</button>
-        </form>
+        </div>
+        <div class="login-form">
+            <form method="post" action="<?= base_url('login') ?>" class="form-box">
+                <h2>Connexion</h2>
+                <?= csrf_field() ?>
+                <?php if (!empty($error)): ?>
+                    <p style="color:#fca5a5; margin:.3rem 0;"><?= htmlspecialchars($error) ?></p>
+                <?php endif; ?>
+                <div class="field">
+                    <label>Email</label>
+                    <input type="email" name="email" placeholder="admin@ifmap.ci" required>
+                </div>
+                <div class="field">
+                    <label>Mot de passe</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
+                </div>
+                <div class="actions">
+                    <span class="help">Compte par défaut: admin@ifmap.ci / admin123</span>
+                    <button type="submit" class="btn-admin">Se connecter</button>
+                </div>
+            </form>
+        </div>
     </div>
-    <div class="container" style="max-width:480px;margin-top:10px;">
-        <p>Compte par défaut: <code>admin@ifmap.ci</code> / <code>admin123</code> (à modifier ensuite)</p>
-    </div>
+</body>
 
-</section>
-
-<?php include __DIR__ . '/../partials/footer.php'; ?>
+</html>
