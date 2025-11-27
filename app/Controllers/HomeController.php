@@ -12,6 +12,13 @@ class HomeController
         $programmes = db()->query('SELECT * FROM programmes ORDER BY id DESC LIMIT 3')->fetchAll();
         $formations = db()->query('SELECT * FROM formations ORDER BY id DESC LIMIT 4')->fetchAll();
         $partners = db()->query('SELECT * FROM partners ORDER BY id DESC LIMIT 8')->fetchAll();
-        return view('home', compact('title', 'news', 'programmes', 'formations', 'partners'));
+        // Stats
+        $stats = [
+            'programmes' => (int)db()->query('SELECT COUNT(*) FROM programmes')->fetchColumn(),
+            'formations' => (int)db()->query('SELECT COUNT(*) FROM formations')->fetchColumn(),
+            'partners'   => (int)db()->query('SELECT COUNT(*) FROM partners')->fetchColumn(),
+            'news'       => (int)db()->query('SELECT COUNT(*) FROM news')->fetchColumn(),
+        ];
+        return view('home', compact('title', 'news', 'programmes', 'formations', 'partners', 'stats'));
     }
 }

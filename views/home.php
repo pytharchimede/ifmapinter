@@ -7,6 +7,14 @@
         <h1 data-anim="fade">Institut IFMAP</h1>
         <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
         <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
+        <?php if (!empty($stats)): ?>
+            <div class="stats" data-anim="fade-delayed2">
+                <div class="stat"><span class="counter" data-target="<?= (int)$stats['programmes'] ?>">0</span><small>Programmes</small></div>
+                <div class="stat"><span class="counter" data-target="<?= (int)$stats['formations'] ?>">0</span><small>Formations</small></div>
+                <div class="stat"><span class="counter" data-target="<?= (int)$stats['partners'] ?>">0</span><small>Partenaires</small></div>
+                <div class="stat"><span class="counter" data-target="<?= (int)$stats['news'] ?>">0</span><small>Actualités</small></div>
+            </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -23,17 +31,17 @@
             <?php if (!empty($programmes)): ?>
                 <?php foreach ($programmes as $p): ?>
                     <div class="card">
-                        <img src="<?= htmlspecialchars($p['image_url'] ?? 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0') ?>" alt="">
+                        <img loading="lazy" src="<?= htmlspecialchars($p['image_url'] ?? 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0') ?>" alt="">
                         <div class="card-body">
                             <h3><?= htmlspecialchars($p['name']) ?></h3>
                             <p><?= htmlspecialchars($p['description'] ?? '') ?></p>
-                            <a href="#" class="btn-outline">En savoir plus</a>
+                            <a href="#" class="btn-outline open-modal">En savoir plus</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
                 <div class="card">
-                    <img src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b" alt="">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b" alt="">
                     <div class="card-body">
                         <h3>Programme Fondamental</h3>
                         <p>Bases professionnelles et techniques pour débutants.</p>
@@ -41,7 +49,7 @@
                     </div>
                 </div>
                 <div class="card">
-                    <img src="https://images.pexels.com/photos/3184639/pexels-photo-3184639.jpeg" alt="">
+                    <img loading="lazy" src="https://images.pexels.com/photos/3184639/pexels-photo-3184639.jpeg" alt="">
                     <div class="card-body">
                         <h3>Programme Technique & Industrie</h3>
                         <p>Énergie, électricité, mécanique, maintenance…</p>
@@ -49,7 +57,7 @@
                     </div>
                 </div>
                 <div class="card">
-                    <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0" alt="">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0" alt="">
                     <div class="card-body">
                         <h3>Management & Filières tertiaires</h3>
                         <p>Commerce, gestion, vente et services.</p>
@@ -75,25 +83,25 @@
             <?php if (!empty($formations)): ?>
                 <?php foreach ($formations as $f): ?>
                     <div class="card-formation">
-                        <img src="<?= htmlspecialchars($f['image_url'] ?? 'https://images.unsplash.com/photo-1509395062183-67c5ad6faff9') ?>">
+                        <img loading="lazy" src="<?= htmlspecialchars($f['image_url'] ?? 'https://images.unsplash.com/photo-1509395062183-67c5ad6faff9') ?>">
                         <h3><?= htmlspecialchars($f['name']) ?></h3>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
                 <div class="card-formation">
-                    <img src="https://images.pexels.com/photos/9800038/pexels-photo-9800038.jpeg">
+                    <img loading="lazy" src="https://images.pexels.com/photos/9800038/pexels-photo-9800038.jpeg">
                     <h3>Pompiste / Station-service</h3>
                 </div>
                 <div class="card-formation">
-                    <img src="https://images.pexels.com/photos/7567445/pexels-photo-7567445.jpeg">
+                    <img loading="lazy" src="https://images.pexels.com/photos/7567445/pexels-photo-7567445.jpeg">
                     <h3>Caissière & Rayonniste</h3>
                 </div>
                 <div class="card-formation">
-                    <img src="https://images.unsplash.com/photo-1509395062183-67c5ad6faff9">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1509395062183-67c5ad6faff9">
                     <h3>Technicien Solaire</h3>
                 </div>
                 <div class="card-formation">
-                    <img src="https://images.pexels.com/photos/4484078/pexels-photo-4484078.jpeg">
+                    <img loading="lazy" src="https://images.pexels.com/photos/4484078/pexels-photo-4484078.jpeg">
                     <h3>Transport & Logistique</h3>
                 </div>
             <?php endif; ?>
@@ -114,19 +122,19 @@
         <div class="grid-3">
 
             <div class="centre">
-                <img src="https://images.pexels.com/photos/3182753/pexels-photo-3182753.jpeg">
+                <img loading="lazy" src="https://images.pexels.com/photos/3182753/pexels-photo-3182753.jpeg">
                 <h3>Centre Énergie & Industrie</h3>
                 <p>Spécialiste des métiers techniques, industriels et durables.</p>
             </div>
 
             <div class="centre">
-                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
+                <img loading="lazy" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
                 <h3>Institut Commerce & Services</h3>
                 <p>Commerce, distribution, relation client et gestion.</p>
             </div>
 
             <div class="centre">
-                <img src="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg">
+                <img loading="lazy" src="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg">
                 <h3>Institut Transport & Sécurité</h3>
                 <p>Logistique, sécurité routière, mobilité.</p>
             </div>
@@ -149,7 +157,7 @@
             <?php if (!empty($news)): ?>
                 <?php foreach ($news as $n): ?>
                     <div class="carousel-item">
-                        <img src="<?= htmlspecialchars($n['image_url'] ?? 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02') ?>">
+                        <img loading="lazy" src="<?= htmlspecialchars($n['image_url'] ?? 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02') ?>">
                         <div class="info">
                             <h3><?= htmlspecialchars($n['title']) ?></h3>
                             <p><?= htmlspecialchars(mb_strimwidth($n['body'] ?? '', 0, 120, '…')) ?></p>
@@ -158,21 +166,21 @@
                 <?php endforeach; ?>
             <?php else: ?>
                 <div class="carousel-item">
-                    <img src="https://images.unsplash.com/photo-1498079022511-d15614cb1c02">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1498079022511-d15614cb1c02">
                     <div class="info">
                         <h3>Session 2025 ouverte</h3>
                         <p>Les pré-inscriptions sont disponibles.</p>
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
                     <div class="info">
                         <h3>Journée Portes Ouvertes</h3>
                         <p>Découvrez les métiers d’avenir.</p>
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0">
                     <div class="info">
                         <h3>Partenariat Entreprises</h3>
                         <p>De nouvelles opportunités pour nos diplômés.</p>
@@ -197,17 +205,18 @@
         <div class="partners">
             <?php if (!empty($partners)): ?>
                 <?php foreach ($partners as $p): ?>
-                    <img src="<?= htmlspecialchars($p['logo_url'] ?? 'https://dummyimage.com/140x70/004b9a/ffffff&text=Logo') ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <img loading="lazy" src="<?= htmlspecialchars($p['logo_url'] ?? 'https://dummyimage.com/140x70/004b9a/ffffff&text=Logo') ?>" alt="<?= htmlspecialchars($p['name']) ?>">
                 <?php endforeach; ?>
             <?php else: ?>
-                <img src="https://dummyimage.com/140x70/003d7a/ffffff&text=Total">
-                <img src="https://dummyimage.com/140x70/002d5a/ffffff&text=Carrefour">
-                <img src="https://dummyimage.com/140x70/004b9a/ffffff&text=Orange">
-                <img src="https://dummyimage.com/140x70/0055cc/ffffff&text=Shell">
+                <img loading="lazy" src="https://dummyimage.com/140x70/003d7a/ffffff&text=Total">
+                <img loading="lazy" src="https://dummyimage.com/140x70/002d5a/ffffff&text=Carrefour">
+                <img loading="lazy" src="https://dummyimage.com/140x70/004b9a/ffffff&text=Orange">
+                <img loading="lazy" src="https://dummyimage.com/140x70/0055cc/ffffff&text=Shell">
             <?php endif; ?>
         </div>
 
     </div>
 </section>
 
+<?php include __DIR__ . '/partials/modal.php'; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>
