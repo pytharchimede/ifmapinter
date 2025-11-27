@@ -19,17 +19,19 @@
                     $bgClass = 'bg-' . (($i % 3) + 1);
                     $hasBg = !empty($c['background_url']);
                     ?>
-                    <div class="hero-slide <?= $hasBg ? '' : $bgClass ?>" <?= $hasBg ? "style=\"background-image:url('" . htmlspecialchars($c['background_url']) . "')\"" : '' ?>>
+                    <div class="hero-slide <?= $hasBg ? '' : $bgClass ?>" <?= $hasBg ? "style=\"--bg-image:url('" . htmlspecialchars($c['background_url']) . "')\"" : '' ?>>
                         <div class="hero-content">
                             <?php if (!empty($c['title'])): ?><h1 data-anim="fade"><?= htmlspecialchars($c['title']) ?></h1><?php endif; ?>
                             <?php if (!empty($c['description'])): ?><p data-anim="fade-delayed"><?= htmlspecialchars($c['description']) ?></p><?php endif; ?>
-                            <?php if (!empty($c['button_text'])): ?>
-                                <a href="<?= htmlspecialchars($c['button_url'] ?? '#') ?>" class="btn-primary" data-anim="fade-delayed2"><?= htmlspecialchars($c['button_text']) ?></a>
+                            <?php
+                            $btnText = !empty($c['caption']) ? $c['caption'] : ($c['button_text'] ?? '');
+                            $btnUrl = !empty($c['button_url']) ? $c['button_url'] : '#';
+                            ?>
+                            <?php if (!empty($btnText)): ?>
+                                <a href="<?= htmlspecialchars($btnUrl) ?>" class="btn-primary" data-anim="fade-delayed2"><?= htmlspecialchars($btnText) ?></a>
                             <?php endif; ?>
                         </div>
-                        <?php if (!empty($c['caption'])): ?>
-                            <div class="hero-caption"><?= htmlspecialchars($c['caption']) ?></div>
-                        <?php endif; ?>
+                        <?php /* caption now used as button text; no extra caption badge */ ?>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>

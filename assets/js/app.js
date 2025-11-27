@@ -42,6 +42,7 @@ if (heroCarousel) {
   const btnNext = heroCarousel.querySelector(".hero-arrow.right");
 
   let index = 0;
+  let autoTimer = null;
 
   function updateHero() {
     track.style.transform = `translateX(${-index * 100}%)`;
@@ -79,13 +80,25 @@ if (heroCarousel) {
       updateHero();
     });
 
-  // Auto-play
-  setInterval(() => {
-    index = (index + 1) % slides.length;
-    updateHero();
-  }, 6000);
+  // Auto-play + pause on hover
+  const startAuto = () => {
+    if (autoTimer) return;
+    autoTimer = setInterval(() => {
+      index = (index + 1) % slides.length;
+      updateHero();
+    }, 6000);
+  };
+  const stopAuto = () => {
+    if (!autoTimer) return;
+    clearInterval(autoTimer);
+    autoTimer = null;
+  };
+
+  heroCarousel.addEventListener("mouseenter", stopAuto);
+  heroCarousel.addEventListener("mouseleave", startAuto);
 
   updateHero();
+  startAuto();
 }
 
 /* ================= GENERIC CAROUSEL ================= */
