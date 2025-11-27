@@ -336,6 +336,52 @@ class AdminController
         header('Location: ' . base_url('/admin/media'));
         return '';
     }
+    // Contacts (messages du formulaire)
+    public function contactsIndex(): string
+    {
+        $items = db()->query('SELECT * FROM contact_messages ORDER BY created_at DESC')->fetchAll();
+        $title = 'Admin – Messages de contact';
+        return view('admin/contacts/index', compact('title', 'items'));
+    }
+    public function contactsExportCsv(): string
+    {
+        // Filters: start, end (YYYY-MM-DD), q (search)
+        $start = trim($_GET['start'] ?? '');
+        $end = trim($_GET['end'] ?? '');
+        $q = trim($_GET['q'] ?? '');
+        $sql = 'SELECT name,email,phone,message,created_at FROM contact_messages WHERE 1';
+        $params = [];
+        if ($start !== '') {
+            $sql .= ' AND DATE(created_at) >= ?';
+            $params[] = $start;
+        }
+        if ($end !== '') {
+            $sql .= ' AND DATE(created_at) <= ?';
+            $params[] = $end;
+        }
+        if ($q !== '') {
+            $sql .= ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR message LIKE ?)';
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+        }
+        $sql .= ' ORDER BY created_at DESC';
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        $items = $st->fetchAll();
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="contacts_ifmap.csv"');
+        $out = fopen('php://output', 'w');
+        // BOM UTF-8 for Excel compatibility
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Nom', 'Email', 'Téléphone', 'Message', 'Date']);
+        foreach ($items as $row) {
+            fputcsv($out, [$row['name'], $row['email'], $row['phone'], $row['message'], $row['created_at']]);
+        }
+        fclose($out);
+        return '';
+    }
     // Changement mot de passe
     public function passwordForm(): string
     {

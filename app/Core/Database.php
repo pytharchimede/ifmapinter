@@ -162,6 +162,16 @@ class Database
                     $seed->execute(['Partenariat Entreprise', 'image', 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02?auto=format&fit=crop&w=1200&q=80', null, 'Signature partenariat']);
                     $seed->execute(['Présentation Programme', 'video', 'https://www.youtube.com/embed/dQw4w9WgXcQ', null, 'Capsule vidéo présentation IFMAP']);
                 }
+            },
+            'create_contact_messages_table' => function (PDO $pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS contact_messages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(191) NOT NULL,
+                    email VARCHAR(191) NULL,
+                    phone VARCHAR(64) NULL,
+                    message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB");
             }
         ];
 
@@ -179,7 +189,7 @@ class Database
     private static function fatal(string $message): void
     {
         http_response_code(500);
-        echo view('errors/500', ['title' => 'Erreur serveur', 'message' => $message]);
+        echo \view('errors/500', ['title' => 'Erreur serveur', 'message' => $message]);
         exit;
     }
 }

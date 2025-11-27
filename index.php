@@ -122,6 +122,67 @@ $router->get('/galerie/data', function () {
   return '';
 });
 
+// Pages: Institut, Campus, Alumni, Contact
+$router->get('/institut', fn() => view('public/institut', [
+  'title' => "L'Institut IFMAP"
+]));
+
+$router->get('/campus', fn() => view('public/campus', [
+  'title' => 'Campus',
+  'status' => 'Projet en cours',
+]));
+
+$router->get('/alumni', fn() => view('public/alumni', [
+  'title' => 'Alumni'
+]));
+
+$router->get('/contact', fn() => view('public/contact', [
+  'title' => 'Contact'
+]));
+$router->post('/contact', function () {
+  require_csrf();
+  $name = trim($_POST['name'] ?? '');
+  $email = trim($_POST['email'] ?? '');
+  $phone = trim($_POST['phone'] ?? '');
+  $message = trim($_POST['message'] ?? '');
+  if ($name !== '' && $message !== '') {
+    $st = db()->prepare('INSERT INTO contact_messages(name,email,phone,message) VALUES(?,?,?,?)');
+    $st->execute([$name, $email, $phone, $message]);
+  }
+  $success = 'Message envoyé. Merci !';
+  return view('public/contact', ['title' => 'Contact', 'success' => $success]);
+});
+
+// Admin: Messages de contact
+$router->get('/admin/contacts', fn() => require_auth(fn() => (new AdminController())->contactsIndex()));
+$router->get('/admin/contacts/export.csv', fn() => require_auth(fn() => (new AdminController())->contactsExportCsv()));
+
+// Alumni: modèle de CV téléchargeable (HTML simple pour l'instant)
+$router->get('/alumni/cv-template', fn() => view('public/alumni_cv', [
+  'title' => 'Modèle de CV Alumni'
+]));
+
+// Export PDF du modèle CV via Dompdf si disponible
+$router->get('/alumni/cv-template/pdf', function () {
+  if (class_exists('Dompdf\\Dompdf')) {
+    ob_start();
+    echo view('public/alumni_cv', ['title' => 'Modèle de CV Alumni']);
+    $html = ob_get_clean();
+    $dompdf = new Dompdf\Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+    $dompdf->stream('cv_alumni_ifmap.pdf', ['Attachment' => true]);
+    return '';
+  }
+  return view('public/alumni_cv', ['title' => 'Modèle de CV Alumni', 'dompdf_missing' => true]);
+});
+
+// Variante compacte A4 du CV
+$router->get('/alumni/cv-template/compact', fn() => view('public/alumni_cv_compact', [
+  'title' => 'CV Alumni – Compact A4'
+]));
+
 // Exemple: autres pages statiques réutilisables si besoin
 // $router->get('/formations', fn () => view('formations', ['title' => 'Formations']));
 

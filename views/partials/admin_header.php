@@ -23,6 +23,7 @@
                 <a href="<?= base_url('admin/formations') ?>">Formations</a>
                 <a href="<?= base_url('admin/partners') ?>">Partenaires</a>
                 <a href="<?= base_url('admin/media') ?>">Médias</a>
+                <a href="<?= base_url('admin/contacts') ?>">Contacts</a>
                 <a href="<?= base_url('admin/password') ?>">Sécurité</a>
                 <a href="<?= base_url('logout') ?>">Déconnexion</a>
             </nav>
