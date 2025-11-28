@@ -20,6 +20,7 @@
                 <a href="<?= base_url('admin') ?>">Dashboard</a>
                 <span class="nav-label">Accueil</span>
                 <a href="<?= base_url('admin/carousels') ?>">Carrousels</a>
+                <a href="<?= base_url('admin/programmes') ?>">Nos Programmes</a>
             </nav>
         </aside>
         <main class="admin-main">

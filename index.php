@@ -32,6 +32,65 @@ try {
   // ignore seeding errors
 }
 
+// Ensure 'programmes' table exists and has required columns for new logic
+try {
+  $table = db()->query("SHOW TABLES LIKE 'programmes'")->fetchColumn();
+  if (!$table) {
+    db()->exec(
+      "CREATE TABLE programmes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        description TEXT NULL,
+        excerpt VARCHAR(500) NULL,
+        content MEDIUMTEXT NULL,
+        url VARCHAR(500) NULL,
+        image_url VARCHAR(500) NULL,
+        status VARCHAR(20) NULL DEFAULT 'published',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  } else {
+    // Add missing columns progressively
+    $cols = db()->query("SHOW COLUMNS FROM programmes")->fetchAll(PDO::FETCH_COLUMN);
+    $add = function ($sql) {
+      db()->exec($sql);
+    };
+    if (!in_array('excerpt', $cols)) $add("ALTER TABLE programmes ADD COLUMN excerpt VARCHAR(500) NULL AFTER description");
+    if (!in_array('content', $cols)) $add("ALTER TABLE programmes ADD COLUMN content MEDIUMTEXT NULL AFTER excerpt");
+    if (!in_array('url', $cols)) $add("ALTER TABLE programmes ADD COLUMN url VARCHAR(500) NULL AFTER content");
+    if (!in_array('status', $cols)) $add("ALTER TABLE programmes ADD COLUMN status VARCHAR(20) NULL DEFAULT 'published' AFTER image_url");
+    if (!in_array('updated_at', $cols)) $add("ALTER TABLE programmes ADD COLUMN updated_at DATETIME NULL AFTER created_at");
+  }
+} catch (Throwable $e) {
+  // ignore programmes migration errors
+}
+
+// Seed initial programmes from existing carousels if empty
+try {
+  $progExists = db()->query("SHOW TABLES LIKE 'programmes'")->fetchColumn();
+  $carExists = db()->query("SHOW TABLES LIKE 'carousels'")->fetchColumn();
+  if ($progExists && $carExists) {
+    $pcount = (int)db()->query('SELECT COUNT(*) FROM programmes')->fetchColumn();
+    if ($pcount === 0) {
+      $cars = db()->query('SELECT * FROM carousels ORDER BY position ASC')->fetchAll();
+      $ins = db()->prepare('INSERT INTO programmes(name, description, excerpt, content, url, status, image_url, created_at) VALUES(?,?,?,?,?,?,?,?)');
+      foreach ($cars as $c) {
+        $name = $c['title'] ?? 'Programme';
+        $description = $c['caption'] ?? '';
+        $excerpt = $c['description'] ?? '';
+        $content = '';
+        $url = $c['button_url'] ?? '';
+        $status = 'published';
+        $image = $c['background_url'] ?? '';
+        $ins->execute([$name, $description, $excerpt, $content, $url, $status, $image, date('Y-m-d H:i:s')]);
+      }
+    }
+  }
+} catch (Throwable $e) {
+  // ignore seeding programmes errors
+}
+
 // Router
 $router = new Router();
 
@@ -182,6 +241,9 @@ $router->get('/admin/carousels/edit', fn() => require_auth(fn() => (new AdminCon
 $router->post('/admin/carousels/edit', fn() => require_auth(fn() => (new AdminController())->carouselsUpdate()));
 $router->get('/admin/carousels/delete', fn() => require_auth(fn() => (new AdminController())->carouselsDelete()));
 $router->post('/admin/carousels/order', fn() => require_auth(fn() => (new AdminController())->carouselsOrder()));
+
+// TinyMCE upload endpoint
+$router->post('/admin/upload', fn() => require_auth(fn() => (new AdminController())->adminUpload()));
 
 // Alumni: modèle de CV téléchargeable (HTML simple pour l'instant)
 $router->get('/alumni/cv-template', fn() => view('public/alumni_cv', [

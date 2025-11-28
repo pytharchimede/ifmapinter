@@ -90,12 +90,34 @@ class AdminController
     public function programmesStore(): string
     {
         require_csrf();
-        $st = db()->prepare('INSERT INTO programmes(name, description, image_url) VALUES(?,?,?)');
-        $st->execute([
-            trim($_POST['name'] ?? ''),
-            trim($_POST['description'] ?? ''),
-            trim($_POST['image_url'] ?? ''),
-        ]);
+        $name = substr(trim($_POST['name'] ?? ''), 0, 160);
+        $description = substr(trim($_POST['description'] ?? ''), 0, 300);
+        $excerpt = substr(trim($_POST['excerpt'] ?? ''), 0, 300);
+        $content = trim($_POST['content'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $status = in_array($_POST['status'] ?? 'draft', ['draft', 'published']) ? $_POST['status'] : 'draft';
+        $image_url = trim($_POST['image_url'] ?? '');
+        // Upload image with WebP conversion
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024; // 2MB
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/programmes';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('p_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/programmes/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/programmes');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO programmes(name, description, excerpt, content, url, status, image_url, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?,NOW())');
+        $st->execute([$name, $description, $excerpt, $content, $url, $status, $image_url, date('Y-m-d H:i:s')]);
         header('Location: ' . base_url('/admin/programmes'));
         return '';
     }
@@ -103,13 +125,33 @@ class AdminController
     {
         require_csrf();
         $id = (int)($_POST['id'] ?? 0);
-        $st = db()->prepare('UPDATE programmes SET name=?, description=?, image_url=? WHERE id=?');
-        $st->execute([
-            trim($_POST['name'] ?? ''),
-            trim($_POST['description'] ?? ''),
-            trim($_POST['image_url'] ?? ''),
-            $id
-        ]);
+        $name = substr(trim($_POST['name'] ?? ''), 0, 160);
+        $description = substr(trim($_POST['description'] ?? ''), 0, 300);
+        $excerpt = substr(trim($_POST['excerpt'] ?? ''), 0, 300);
+        $content = trim($_POST['content'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $status = in_array($_POST['status'] ?? 'draft', ['draft', 'published']) ? $_POST['status'] : 'draft';
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/programmes';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('p_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/programmes/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/programmes');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE programmes SET name=?, description=?, excerpt=?, content=?, url=?, status=?, image_url=?, updated_at=NOW() WHERE id=?');
+        $st->execute([$name, $description, $excerpt, $content, $url, $status, $image_url, $id]);
         header('Location: ' . base_url('/admin/programmes'));
         return '';
     }
@@ -492,6 +534,32 @@ class AdminController
         }
     }
 
+    private function convertToWebpIfPossibleGeneric(string $sourcePath, string $ext, string $baseDir, string &$urlField, string $publicSubdir): void
+    {
+        $lower = strtolower($ext);
+        if ($lower === 'webp') return;
+        try {
+            $img = null;
+            if ($lower === 'jpg' || $lower === 'jpeg') {
+                if (function_exists('imagecreatefromjpeg')) $img = @imagecreatefromjpeg($sourcePath);
+            } elseif ($lower === 'png') {
+                if (function_exists('imagecreatefrompng')) $img = @imagecreatefrompng($sourcePath);
+            }
+            if ($img && function_exists('imagewebp')) {
+                $webpName = pathinfo($sourcePath, PATHINFO_FILENAME) . '.webp';
+                $webpPath = $baseDir . '/' . $webpName;
+                @imagepalettetotruecolor($img);
+                @imagealphablending($img, true);
+                @imagesavealpha($img, true);
+                if (@imagewebp($img, $webpPath, 80)) {
+                    $urlField = base_url($publicSubdir . '/' . $webpName);
+                }
+                imagedestroy($img);
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+
     // AJAX ordering
     public function carouselsOrder(): string
     {
@@ -508,6 +576,41 @@ class AdminController
         }
         header('Content-Type: application/json');
         echo json_encode(['ok' => true]);
+        return '';
+    }
+
+    // TinyMCE upload endpoint
+    public function adminUpload(): string
+    {
+        require_csrf();
+        header('Content-Type: application/json');
+        if (empty($_FILES['file']['name'])) {
+            echo json_encode(['error' => 'Aucun fichier']);
+            return '';
+        }
+        $upl = $_FILES['file'];
+        if ($upl['error'] !== UPLOAD_ERR_OK) {
+            echo json_encode(['error' => 'Erreur upload']);
+            return '';
+        }
+        $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+        $allowedImg = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        if (!in_array($ext, $allowedImg)) {
+            echo json_encode(['error' => 'Type non supporté']);
+            return '';
+        }
+        $baseDir = __DIR__ . '/../../uploads/editor';
+        if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+        $fname = uniqid('e_') . '.' . $ext;
+        $dest = $baseDir . '/' . $fname;
+        if (!move_uploaded_file($upl['tmp_name'], $dest)) {
+            echo json_encode(['error' => 'Échec sauvegarde']);
+            return '';
+        }
+        $location = base_url('uploads/editor/' . $fname);
+        // Try webp conversion for jpg/png
+        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $location, 'uploads/editor');
+        echo json_encode(['location' => $location]);
         return '';
     }
     public function contactsExportCsv(): string
