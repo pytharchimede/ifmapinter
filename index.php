@@ -146,6 +146,74 @@ try {
   // ignore sections migration errors
 }
 
+// Ensure 'centres' (Instituts & Centres) table exists with required columns
+try {
+  $centTable = db()->query("SHOW TABLES LIKE 'centres'")->fetchColumn();
+  if (!$centTable) {
+    db()->exec(
+      "CREATE TABLE centres (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        subtitle VARCHAR(300) NULL,
+        excerpt VARCHAR(500) NULL,
+        content MEDIUMTEXT NULL,
+        url VARCHAR(500) NULL,
+        image_url VARCHAR(500) NULL,
+        status VARCHAR(20) NULL DEFAULT 'published',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  } else {
+    $cols = db()->query("SHOW COLUMNS FROM centres")->fetchAll(PDO::FETCH_COLUMN);
+    $addC = function ($sql) {
+      db()->exec($sql);
+    };
+    if (!in_array('subtitle', $cols)) $addC("ALTER TABLE centres ADD COLUMN subtitle VARCHAR(300) NULL AFTER name");
+    if (!in_array('excerpt', $cols)) $addC("ALTER TABLE centres ADD COLUMN excerpt VARCHAR(500) NULL AFTER subtitle");
+    if (!in_array('content', $cols)) $addC("ALTER TABLE centres ADD COLUMN content MEDIUMTEXT NULL AFTER excerpt");
+    if (!in_array('url', $cols)) $addC("ALTER TABLE centres ADD COLUMN url VARCHAR(500) NULL AFTER content");
+    if (!in_array('status', $cols)) $addC("ALTER TABLE centres ADD COLUMN status VARCHAR(20) NULL DEFAULT 'published' AFTER image_url");
+    if (!in_array('updated_at', $cols)) $addC("ALTER TABLE centres ADD COLUMN updated_at DATETIME NULL AFTER created_at");
+  }
+} catch (Throwable $e) {
+  // ignore centres migration errors
+}
+
+// Seed initial centres if empty
+try {
+  $centExists = db()->query("SHOW TABLES LIKE 'centres'")->fetchColumn();
+  if ($centExists) {
+    $ccount = (int)db()->query('SELECT COUNT(*) FROM centres')->fetchColumn();
+    if ($ccount === 0) {
+      $insC = db()->prepare('INSERT INTO centres(name, subtitle, excerpt, content, url, image_url, status, created_at) VALUES(?,?,?,?,?,?,?,?)');
+      $now = date('Y-m-d H:i:s');
+      $insC->execute([
+        'Centre Énergie & Industrie',
+        'Innovation & ingénierie',
+        'Pôle dédié aux énergies, à l’ingénierie et aux technologies appliquées.',
+        '',
+        '',
+        base_url('assets/img/centre1.jpg'),
+        'published',
+        $now
+      ]);
+      $insC->execute([
+        'Institut Commerce & Services',
+        'Management & Retail',
+        'Pôle orienté commerce, services, retail et relation client.',
+        '',
+        '',
+        base_url('assets/img/centre2.jpg'),
+        'published',
+        $now
+      ]);
+    }
+  }
+} catch (Throwable $e) {
+  // ignore centres seed errors
+}
+
 // Seed initial programmes from existing carousels if empty
 try {
   $progExists = db()->query("SHOW TABLES LIKE 'programmes'")->fetchColumn();
@@ -222,6 +290,16 @@ $router->get('/admin/media/delete', fn() => require_auth(fn() => (new AdminContr
 $router->get('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordForm()));
 $router->post('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordUpdate()));
 
+// Admin Centres (Instituts & Centres IFMAP)
+$router->get('/admin/centres', fn() => require_auth(fn() => (new AdminController())->centresIndex()));
+$router->get('/admin/centres/create', fn() => require_auth(fn() => (new AdminController())->centresForm()));
+$router->post('/admin/centres/create', fn() => require_auth(fn() => (new AdminController())->centresStore()));
+$router->get('/admin/centres/edit', fn() => require_auth(fn() => (new AdminController())->centresForm()));
+$router->post('/admin/centres/edit', fn() => require_auth(fn() => (new AdminController())->centresUpdate()));
+$router->get('/admin/centres/delete', fn() => require_auth(fn() => (new AdminController())->centresDelete()));
+// Section params save for centres
+$router->post('/admin/centres/section/save', fn() => require_auth(fn() => (new AdminController())->centresSectionSave()));
+
 // Pages publiques listes
 $router->get('/actualites', fn() => view('public/news', [
   'title' => 'Actualités',
@@ -239,6 +317,21 @@ $router->get('/actualites/article', function () {
 $router->get('/programmes', fn() => view('public/programmes', [
   'title' => 'Programmes',
   'items' => db()->query('SELECT * FROM programmes ORDER BY id DESC')->fetchAll()
+]));
+$router->get('/centres', fn() => view('public/centres', [
+  'title' => (function () {
+    $st = db()->prepare('SELECT title FROM sections WHERE `key`=?');
+    $st->execute(['centres']);
+    $t = $st->fetchColumn();
+    return $t ?: 'Instituts & Centres IFMAP';
+  })(),
+  'subtitle' => (function () {
+    $st = db()->prepare('SELECT subtitle FROM sections WHERE `key`=?');
+    $st->execute(['centres']);
+    $t = $st->fetchColumn();
+    return $t ?: "Découvrez nos pôles d'excellence et d'innovation.";
+  })(),
+  'items' => db()->query("SELECT * FROM centres WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll()
 ]));
 $router->get('/formations', fn() => view('public/formations', [
   'title' => (function () {

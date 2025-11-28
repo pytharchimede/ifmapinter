@@ -40,21 +40,21 @@
                     <div class="hero-content">
                         <h1 data-anim="fade">Institut IFMAP</h1>
                         <p data-anim="fade-delayed">Nous formons les compétences de demain avec excellence, innovation et impact.</p>
-                        <a href="#programmes" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
+                        <a href="<?= base_url('programmes') ?>" class="btn-primary" data-anim="fade-delayed2">Découvrir nos Programmes</a>
                     </div>
                 </div>
                 <div class="hero-slide bg-2">
                     <div class="hero-content">
                         <h1 data-anim="fade">Formations d’excellence</h1>
                         <p data-anim="fade-delayed">Des parcours professionnalisants alignés sur les besoins des entreprises.</p>
-                        <a href="#formations" class="btn-primary" data-anim="fade-delayed2">Voir les Formations</a>
+                        <a href="<?= base_url('formations') ?>" class="btn-primary" data-anim="fade-delayed2">Voir les Formations</a>
                     </div>
                 </div>
                 <div class="hero-slide bg-3">
                     <div class="hero-content">
                         <h1 data-anim="fade">Entreprises partenaires</h1>
                         <p data-anim="fade-delayed">Un réseau actif pour l’insertion et l’employabilité de nos diplômés.</p>
-                        <a href="#partenaires" class="btn-primary" data-anim="fade-delayed2">Nos Partenaires</a>
+                        <a href="<?= base_url('partenaires') ?>" class="btn-primary" data-anim="fade-delayed2">Nos Partenaires</a>
                     </div>
                 </div>
             <?php endif; ?>
@@ -161,31 +161,59 @@
 <!-- ================= INSTITUTS & CENTRES ================= -->
 <section class="section" id="centres">
     <div class="container">
+        <?php
+        // Centres dynamiques depuis la BDD (publiés uniquement)
+        $centres = [];
+        try {
+            $centres = db()->query("SELECT * FROM centres WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll();
+        } catch (Throwable $e) {
+            $centres = [];
+        }
+        // En-tête dynamique depuis sections
+        $centTitle = 'Instituts & Centres IFMAP';
+        $centSubtitle = 'Découvrez nos pôles d\'excellence et d\'innovation.';
+        try {
+            $st = db()->prepare('SELECT title, subtitle FROM sections WHERE `key`=?');
+            $st->execute(['centres']);
+            $row = $st->fetch();
+            if ($row) {
+                $centTitle = $row['title'] ?: $centTitle;
+                $centSubtitle = $row['subtitle'] ?: $centSubtitle;
+            }
+        } catch (Throwable $e) {
+        }
+        ?>
         <div class="section-title">
-            <h2>Instituts & Centres IFMAP</h2>
-            <p>Une organisation structurée en pôles thématiques.</p>
+            <h2><?= htmlspecialchars($centTitle) ?></h2>
+            <p><?= htmlspecialchars($centSubtitle) ?></p>
         </div>
 
         <div class="grid-3">
-
-            <div class="centre">
-                <img loading="lazy" src="https://images.pexels.com/photos/3182753/pexels-photo-3182753.jpeg">
-                <h3>Centre Énergie & Industrie</h3>
-                <p>Spécialiste des métiers techniques, industriels et durables.</p>
-            </div>
-
-            <div class="centre">
-                <img loading="lazy" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
-                <h3>Institut Commerce & Services</h3>
-                <p>Commerce, distribution, relation client et gestion.</p>
-            </div>
-
-            <div class="centre">
-                <img loading="lazy" src="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg">
-                <h3>Institut Transport & Sécurité</h3>
-                <p>Logistique, sécurité routière, mobilité.</p>
-            </div>
-
+            <?php if (!empty($centres)): ?>
+                <?php foreach ($centres as $c): ?>
+                    <div class="centre">
+                        <img loading="lazy" src="<?= htmlspecialchars($c['image_url'] ?? 'https://images.pexels.com/photos/3182753/pexels-photo-3182753.jpeg') ?>">
+                        <h3><?= htmlspecialchars($c['name']) ?></h3>
+                        <?php if (!empty($c['excerpt'])): ?><p><?= htmlspecialchars($c['excerpt']) ?></p><?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="centre">
+                    <img loading="lazy" src="https://images.pexels.com/photos/3182753/pexels-photo-3182753.jpeg">
+                    <h3>Centre Énergie & Industrie</h3>
+                    <p>Spécialiste des métiers techniques, industriels et durables.</p>
+                </div>
+                <div class="centre">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
+                    <h3>Institut Commerce & Services</h3>
+                    <p>Commerce, distribution, relation client et gestion.</p>
+                </div>
+                <div class="centre">
+                    <img loading="lazy" src="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg">
+                    <h3>Institut Transport & Sécurité</h3>
+                    <p>Logistique, sécurité routière, mobilité.</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </section>

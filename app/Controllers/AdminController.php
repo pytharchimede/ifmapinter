@@ -281,6 +281,123 @@ class AdminController
         return '';
     }
 
+    // Centres (Instituts & Centres IFMAP)
+    public function centresIndex(): string
+    {
+        $items = db()->query('SELECT * FROM centres ORDER BY id DESC')->fetchAll();
+        $st = db()->prepare('SELECT title, subtitle FROM sections WHERE `key`=?');
+        $st->execute(['centres']);
+        $section = $st->fetch() ?: ['title' => 'Instituts & Centres IFMAP', "subtitle" => "Découvrez nos pôles d'excellence et d'innovation."];
+        $title = 'Admin – Centres';
+        return view('admin/centres/index', compact('title', 'items', 'section'));
+    }
+    public function centresForm(): string
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $item = null;
+        if ($id) {
+            $st = db()->prepare('SELECT * FROM centres WHERE id=?');
+            $st->execute([$id]);
+            $item = $st->fetch();
+        }
+        $title = $id ? 'Modifier Centre' : 'Créer Centre';
+        return view('admin/centres/form', compact('title', 'item'));
+    }
+    public function centresStore(): string
+    {
+        require_csrf();
+        $name = substr(trim($_POST['name'] ?? ''), 0, 160);
+        $subtitle = substr(trim($_POST['subtitle'] ?? ''), 0, 300);
+        $excerpt = substr(trim($_POST['excerpt'] ?? ''), 0, 500);
+        $content = trim($_POST['content'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $status = in_array($_POST['status'] ?? 'published', ['draft', 'published']) ? $_POST['status'] : 'published';
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/centres';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('c_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/centres/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/centres');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO centres(name, subtitle, excerpt, content, url, image_url, status, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?,NOW())');
+        $st->execute([$name, $subtitle, $excerpt, $content, $url, $image_url, $status, date('Y-m-d H:i:s')]);
+        header('Location: ' . base_url('/admin/centres'));
+        return '';
+    }
+    public function centresUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $name = substr(trim($_POST['name'] ?? ''), 0, 160);
+        $subtitle = substr(trim($_POST['subtitle'] ?? ''), 0, 300);
+        $excerpt = substr(trim($_POST['excerpt'] ?? ''), 0, 500);
+        $content = trim($_POST['content'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $status = in_array($_POST['status'] ?? 'published', ['draft', 'published']) ? $_POST['status'] : 'published';
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/centres';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('c_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/centres/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/centres');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE centres SET name=?, subtitle=?, excerpt=?, content=?, url=?, image_url=?, status=?, updated_at=NOW() WHERE id=?');
+        $st->execute([$name, $subtitle, $excerpt, $content, $url, $image_url, $status, $id]);
+        header('Location: ' . base_url('/admin/centres'));
+        return '';
+    }
+    public function centresDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('DELETE FROM centres WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/centres'));
+        return '';
+    }
+    public function centresSectionSave(): string
+    {
+        require_csrf();
+        $title = trim($_POST['title'] ?? '') ?: null;
+        $subtitle = trim($_POST['subtitle'] ?? '') ?: null;
+        $exists = db()->prepare('SELECT COUNT(*) FROM sections WHERE `key`=?');
+        $exists->execute(['centres']);
+        if ((int)$exists->fetchColumn() > 0) {
+            $upd = db()->prepare('UPDATE sections SET title=?, subtitle=?, updated_at=NOW() WHERE `key`=?');
+            $upd->execute([$title, $subtitle, 'centres']);
+        } else {
+            $ins = db()->prepare('INSERT INTO sections(`key`, title, subtitle, updated_at) VALUES(?,?,?,NOW())');
+            $ins->execute(['centres', $title, $subtitle]);
+        }
+        header('Location: ' . base_url('/admin/centres'));
+        return '';
+    }
+
     // Partenaires
     public function partnersIndex(): string
     {
