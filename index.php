@@ -339,6 +339,10 @@ $router = new Router();
 
 // Routes (GET)
 $router->get('/', fn() => (new HomeController())->index());
+$router->get('/temoignages', fn() => view('public/testimonials', [
+  'title' => 'Témoignages',
+  'rows' => db()->query("SELECT * FROM testimonials WHERE COALESCE(status,'pending')='approved' ORDER BY id DESC")->fetchAll()
+]));
 $router->post('/temoignages/soumettre', fn() => (new HomeController())->submitTestimonial());
 
 // Auth

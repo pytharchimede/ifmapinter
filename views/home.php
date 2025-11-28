@@ -315,50 +315,26 @@
         <div class="testimonials">
             <?php if (!empty($testimonials)): ?>
                 <?php foreach ($testimonials as $t): ?>
-                    <div class="testimonial">
+                    <div class="testimonial" data-anim="fade">
                         <div class="author">
-                            <img loading="lazy" src="<?= htmlspecialchars($t['avatar_url'] ?? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop') ?>" alt="">
+                            <img loading="lazy" src="<?= htmlspecialchars($t['avatar_url'] ?: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop') ?>" alt="Avatar de <?= htmlspecialchars($t['name']) ?>">
                             <div class="meta">
                                 <strong><?= htmlspecialchars($t['name']) ?></strong>
-                                <small><?= htmlspecialchars($t['role'] ?? '') ?></small>
+                                <?php if (!empty($t['role'])): ?><small><?= htmlspecialchars($t['role']) ?></small><?php endif; ?>
                             </div>
                         </div>
                         <p>“<?= htmlspecialchars($t['message']) ?>”</p>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div class="testimonial">
-                    <div class="author">
-                        <img loading="lazy" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop" alt="">
-                        <div class="meta">
-                            <strong>Marie K.</strong>
-                            <small>Alumni – Management</small>
-                        </div>
-                    </div>
-                    <p>“Des enseignements concrets et un excellent accompagnement vers l’emploi.”</p>
-                </div>
-                <div class="testimonial">
-                    <div class="author">
-                        <img loading="lazy" src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=200&h=200&fit=crop" alt="">
-                        <div class="meta">
-                            <strong>Ismaël A.</strong>
-                            <small>Étudiant – Solaire</small>
-                        </div>
-                    </div>
-                    <p>“Des ateliers pratiques avec du matériel pro, j’ai gagné en confiance.”</p>
-                </div>
-                <div class="testimonial">
-                    <div class="author">
-                        <img loading="lazy" src="https://images.unsplash.com/photo-1547425260-76bcadfb4f2a?w=200&h=200&fit=crop" alt="">
-                        <div class="meta">
-                            <strong>Fatou S.</strong>
-                            <small>Partenaire – Retail</small>
-                        </div>
-                    </div>
-                    <p>“Nous recrutons régulièrement des profils IFMAP pour leur professionnalisme.”</p>
-                </div>
+                <p style="opacity:.75; font-size:.95rem;">Aucun témoignage validé pour l’instant.</p>
             <?php endif; ?>
         </div>
+        <?php if (!empty($testimonials)): ?>
+            <div style="margin-top:1.2rem; text-align:right;">
+                <a class="btn-outline" href="<?= base_url('temoignages') ?>">Voir tous les témoignages →</a>
+            </div>
+        <?php endif; ?>
 
         <div class="card" style="margin-top:1.25rem;">
             <div class="card-body">
