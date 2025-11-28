@@ -18,6 +18,8 @@
             </div>
             <nav class="admin-side-nav">
                 <a href="<?= base_url('admin') ?>">Dashboard</a>
+                <span class="nav-label">Analytics</span>
+                <a href="<?= base_url('admin/analytics/visits') ?>">Visites du site</a>
                 <span class="nav-label">Accueil</span>
                 <a href="<?= base_url('admin/carousels') ?>">Carrousels</a>
                 <a href="<?= base_url('admin/programmes') ?>">Nos Programmes</a>

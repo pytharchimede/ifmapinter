@@ -1477,4 +1477,273 @@ class AdminController
         $title = 'Changer mot de passe';
         return view('admin/security/password', compact('title', 'success'));
     }
+
+    // Analytics – Visites
+    public function analyticsVisits(): string
+    {
+        $title = 'Analytics – Visites du site';
+        $totalVisits = 0;
+        $uniqueVisitors = 0;
+        $topPaths = [];
+        $topCountries = [];
+        $dailyLast14 = [];
+        $hourlyToday = [];
+        $recent = [];
+
+        // Filtres
+        $start = trim($_GET['start'] ?? '');
+        $end = trim($_GET['end'] ?? '');
+        $preset = trim($_GET['preset'] ?? ''); // today|7d|30d|90d
+        $q = trim($_GET['path'] ?? '');
+        $country = trim($_GET['country'] ?? '');
+        $ip = trim($_GET['ip'] ?? '');
+        $ua = trim($_GET['ua'] ?? '');
+        $ref = trim($_GET['ref'] ?? '');
+        $hfrom = isset($_GET['hfrom']) && $_GET['hfrom'] !== '' ? (int)$_GET['hfrom'] : null;
+        $hto = isset($_GET['hto']) && $_GET['hto'] !== '' ? (int)$_GET['hto'] : null;
+        $include_admin = isset($_GET['include_admin']) && $_GET['include_admin'] == '1';
+
+        // Appliquer preset si start/end non fournis
+        if ($start === '' && $end === '' && $preset !== '') {
+            $today = new \DateTime('today');
+            switch ($preset) {
+                case 'today':
+                    $start = $today->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+                case '7d':
+                    $from = (clone $today)->modify('-6 days');
+                    $start = $from->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+                case '30d':
+                    $from = (clone $today)->modify('-29 days');
+                    $start = $from->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+                case '90d':
+                    $from = (clone $today)->modify('-89 days');
+                    $start = $from->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+            }
+        }
+
+        if ($hfrom !== null && ($hfrom < 0 || $hfrom > 23)) $hfrom = null;
+        if ($hto !== null && ($hto < 0 || $hto > 23)) $hto = null;
+        if ($hfrom !== null && $hto !== null && $hfrom > $hto) {
+            $tmp = $hfrom;
+            $hfrom = $hto;
+            $hto = $tmp;
+        }
+
+        $where = '1';
+        $params = [];
+        if ($start !== '') {
+            $where .= ' AND DATE(created_at) >= ?';
+            $params[] = $start;
+        }
+        if ($end !== '') {
+            $where .= ' AND DATE(created_at) <= ?';
+            $params[] = $end;
+        }
+        if ($q !== '') {
+            $where .= ' AND path LIKE ?';
+            $params[] = "%$q%";
+        }
+        if ($country !== '') {
+            $where .= ' AND country = ?';
+            $params[] = $country;
+        }
+        if ($ip !== '') {
+            $where .= ' AND ip LIKE ?';
+            $params[] = "%$ip%";
+        }
+        if ($ua !== '') {
+            $where .= ' AND user_agent LIKE ?';
+            $params[] = "%$ua%";
+        }
+        if ($ref !== '') {
+            $where .= ' AND referrer LIKE ?';
+            $params[] = "%$ref%";
+        }
+        if (!$include_admin) {
+            $where .= " AND path NOT LIKE '/admin%'";
+        }
+        if ($hfrom !== null && $hto !== null) {
+            $where .= ' AND HOUR(created_at) BETWEEN ? AND ?';
+            $params[] = $hfrom;
+            $params[] = $hto;
+        }
+
+        try {
+            $st = db()->prepare("SELECT COUNT(*) FROM visits WHERE $where");
+            $st->execute($params);
+            $totalVisits = (int)$st->fetchColumn();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $st = db()->prepare("SELECT COUNT(DISTINCT CONCAT(COALESCE(ip,''),'|',COALESCE(user_agent,''))) FROM visits WHERE $where");
+            $st->execute($params);
+            $uniqueVisitors = (int)$st->fetchColumn();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $st = db()->prepare("SELECT path, COUNT(*) AS c FROM visits WHERE $where GROUP BY path ORDER BY c DESC LIMIT 10");
+            $st->execute($params);
+            $topPaths = $st->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $st = db()->prepare("SELECT country, COUNT(*) AS c FROM visits WHERE $where AND country IS NOT NULL AND country<>'' GROUP BY country ORDER BY c DESC LIMIT 10");
+            $st->execute($params);
+            $topCountries = $st->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        try {
+            if ($start === '' && $end === '') {
+                $st = db()->query("SELECT DATE(created_at) AS d, COUNT(*) AS c FROM visits WHERE created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) GROUP BY DATE(created_at) ORDER BY d ASC");
+                $dailyLast14 = $st->fetchAll();
+            } else {
+                $st = db()->prepare("SELECT DATE(created_at) AS d, COUNT(*) AS c FROM visits WHERE $where GROUP BY DATE(created_at) ORDER BY d ASC");
+                $st->execute($params);
+                $dailyLast14 = $st->fetchAll();
+            }
+        } catch (\Throwable $e) {
+        }
+        try {
+            $whereToday = "DATE(created_at)=CURDATE()" . ($where ? " AND ($where)" : '');
+            $st = db()->prepare("SELECT HOUR(created_at) AS h, COUNT(*) AS c FROM visits WHERE $whereToday GROUP BY HOUR(created_at) ORDER BY h ASC");
+            $st->execute($params);
+            $hourlyToday = $st->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $st = db()->prepare("SELECT * FROM visits WHERE $where ORDER BY id DESC LIMIT 50");
+            $st->execute($params);
+            $recent = $st->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        return view('admin/analytics/visits', compact(
+            'title',
+            'totalVisits',
+            'uniqueVisitors',
+            'topPaths',
+            'topCountries',
+            'dailyLast14',
+            'hourlyToday',
+            'recent',
+            'start',
+            'end',
+            'preset',
+            'q',
+            'country',
+            'ip',
+            'ua',
+            'ref',
+            'hfrom',
+            'hto',
+            'include_admin'
+        ));
+    }
+
+    public function analyticsVisitsExport(): string
+    {
+        $start = trim($_GET['start'] ?? '');
+        $end = trim($_GET['end'] ?? '');
+        $preset = trim($_GET['preset'] ?? '');
+        $q = trim($_GET['path'] ?? '');
+        $country = trim($_GET['country'] ?? '');
+        $ip = trim($_GET['ip'] ?? '');
+        $ua = trim($_GET['ua'] ?? '');
+        $ref = trim($_GET['ref'] ?? '');
+        $hfrom = isset($_GET['hfrom']) && $_GET['hfrom'] !== '' ? (int)$_GET['hfrom'] : null;
+        $hto = isset($_GET['hto']) && $_GET['hto'] !== '' ? (int)$_GET['hto'] : null;
+        $include_admin = isset($_GET['include_admin']) && $_GET['include_admin'] == '1';
+
+        if ($start === '' && $end === '' && $preset !== '') {
+            $today = new \DateTime('today');
+            switch ($preset) {
+                case 'today':
+                    $start = $today->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+                case '7d':
+                    $from = (clone $today)->modify('-6 days');
+                    $start = $from->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+                case '30d':
+                    $from = (clone $today)->modify('-29 days');
+                    $start = $from->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+                case '90d':
+                    $from = (clone $today)->modify('-89 days');
+                    $start = $from->format('Y-m-d');
+                    $end = $today->format('Y-m-d');
+                    break;
+            }
+        }
+        if ($hfrom !== null && ($hfrom < 0 || $hfrom > 23)) $hfrom = null;
+        if ($hto !== null && ($hto < 0 || $hto > 23)) $hto = null;
+        if ($hfrom !== null && $hto !== null && $hfrom > $hto) {
+            $tmp = $hfrom;
+            $hfrom = $hto;
+            $hto = $tmp;
+        }
+
+        $where = '1';
+        $params = [];
+        if ($start !== '') {
+            $where .= ' AND DATE(created_at) >= ?';
+            $params[] = $start;
+        }
+        if ($end !== '') {
+            $where .= ' AND DATE(created_at) <= ?';
+            $params[] = $end;
+        }
+        if ($q !== '') {
+            $where .= ' AND path LIKE ?';
+            $params[] = "%$q%";
+        }
+        if ($country !== '') {
+            $where .= ' AND country = ?';
+            $params[] = $country;
+        }
+        if ($ip !== '') {
+            $where .= ' AND ip LIKE ?';
+            $params[] = "%$ip%";
+        }
+        if ($ua !== '') {
+            $where .= ' AND user_agent LIKE ?';
+            $params[] = "%$ua%";
+        }
+        if ($ref !== '') {
+            $where .= ' AND referrer LIKE ?';
+            $params[] = "%$ref%";
+        }
+        if (!$include_admin) {
+            $where .= " AND path NOT LIKE '/admin%'";
+        }
+        if ($hfrom !== null && $hto !== null) {
+            $where .= ' AND HOUR(created_at) BETWEEN ? AND ?';
+            $params[] = $hfrom;
+            $params[] = $hto;
+        }
+
+        $st = db()->prepare("SELECT created_at, path, ip, port, user_agent, referrer, country, city FROM visits WHERE $where ORDER BY created_at DESC");
+        $st->execute($params);
+        $rows = $st->fetchAll();
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="visites_ifmap.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Date', 'Path', 'IP', 'Port', 'User-Agent', 'Referrer', 'Pays', 'Ville']);
+        foreach ($rows as $r) {
+            fputcsv($out, [$r['created_at'], $r['path'], $r['ip'], $r['port'], $r['user_agent'], $r['referrer'], $r['country'], $r['city']]);
+        }
+        fclose($out);
+        return '';
+    }
 }

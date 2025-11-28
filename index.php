@@ -377,6 +377,66 @@ try {
   // ignore seeding programmes errors
 }
 
+// Visits analytics table (création progressive)
+try {
+  $visTable = db()->query("SHOW TABLES LIKE 'visits'")->fetchColumn();
+  if (!$visTable) {
+    db()->exec(
+      "CREATE TABLE visits (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        path VARCHAR(500) NOT NULL,
+        ip VARCHAR(64) NULL,
+        port INT NULL,
+        user_agent VARCHAR(500) NULL,
+        referrer VARCHAR(500) NULL,
+        country VARCHAR(100) NULL,
+        city VARCHAR(150) NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_path (path),
+        INDEX idx_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  } else {
+    // Add missing columns if we evolve schema later
+    $cols = db()->query("SHOW COLUMNS FROM visits")->fetchAll(PDO::FETCH_COLUMN);
+    $addV = function ($sql) {
+      db()->exec($sql);
+    };
+    if (!in_array('country', $cols)) $addV("ALTER TABLE visits ADD COLUMN country VARCHAR(100) NULL AFTER referrer");
+    if (!in_array('city', $cols)) $addV("ALTER TABLE visits ADD COLUMN city VARCHAR(150) NULL AFTER country");
+  }
+} catch (Throwable $e) { /* ignore visits migration */
+}
+
+// Enregistrer la visite courante (avant instanciation Router pour simplicité)
+try {
+  $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
+  $path = parse_url($reqUri, PHP_URL_PATH) ?: '/';
+  $skip = false;
+  // Exclure assets statiques & endpoints sensibles
+  if (preg_match('#^/(assets|uploads)/#', $path)) $skip = true;
+  if (preg_match('#\.(css|js|png|jpe?g|webp|gif|svg|ico)$#i', $path)) $skip = true;
+  if (strpos($path, '/admin') === 0) { /* on garde les pages admin pour analytics globales ? */
+  }
+  if (!$skip) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+    $port = isset($_SERVER['REMOTE_PORT']) ? (int)$_SERVER['REMOTE_PORT'] : null;
+    $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 490);
+    $ref = substr($_SERVER['HTTP_REFERER'] ?? '', 0, 490);
+    // Détection pays basique: Cloudflare header ou 1er code langue
+    $country = $_SERVER['HTTP_CF_IPCOUNTRY'] ?? null;
+    if (!$country) {
+      $al = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
+      $cc = substr($al, 0, 2);
+      if ($cc) $country = strtoupper($cc);
+    }
+    $city = null; // Pas de géolocalisation fine pour l'instant
+    $ins = db()->prepare('INSERT INTO visits(path, ip, port, user_agent, referrer, country, city) VALUES(?,?,?,?,?,?,?)');
+    $ins->execute([$path, $ip, $port, $ua, $ref, $country, $city]);
+  }
+} catch (Throwable $e) { /* ignore visit logging */
+}
+
 // Router
 $router = new Router();
 
@@ -818,6 +878,10 @@ $router->post('/admin/upload', fn() => require_auth(fn() => (new AdminController
 // Admin Settings
 $router->get('/admin/settings', fn() => require_auth(fn() => (new AdminController())->settingsForm()));
 $router->post('/admin/settings', fn() => require_auth(fn() => (new AdminController())->settingsSave()));
+
+// Admin Analytics (visites)
+$router->get('/admin/analytics/visits', fn() => require_auth(fn() => (new AdminController())->analyticsVisits()));
+$router->get('/admin/analytics/visits/export.csv', fn() => require_auth(fn() => (new AdminController())->analyticsVisitsExport()));
 
 // Newsletter subscribe endpoint
 $router->post('/newsletter/subscribe', function () {
