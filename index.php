@@ -339,6 +339,7 @@ $router = new Router();
 
 // Routes (GET)
 $router->get('/', fn() => (new HomeController())->index());
+$router->post('/temoignages/soumettre', fn() => (new HomeController())->submitTestimonial());
 
 // Auth
 $router->get('/login', fn() => (new AuthController())->loginForm());
@@ -385,6 +386,12 @@ $router->get('/admin/media/delete', fn() => require_auth(fn() => (new AdminContr
 // Admin sécurité
 $router->get('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordForm()));
 $router->post('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordUpdate()));
+
+// Admin Témoignages (modération)
+$router->get('/admin/testimonials', fn() => require_auth(fn() => (new AdminController())->testimonialsIndex()));
+$router->get('/admin/testimonials/approve', fn() => require_auth(fn() => (new AdminController())->testimonialsApprove()));
+$router->get('/admin/testimonials/reject', fn() => require_auth(fn() => (new AdminController())->testimonialsReject()));
+$router->get('/admin/testimonials/delete', fn() => require_auth(fn() => (new AdminController())->testimonialsDelete()));
 
 // Admin RSS sources
 $router->get('/admin/rss-sources', fn() => require_auth(fn() => (new AdminController())->rssSourcesIndex()));

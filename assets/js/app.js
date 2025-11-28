@@ -106,86 +106,120 @@ const carousel = document.getElementById("carousel");
 if (carousel) {
   const items = [...carousel.querySelectorAll(".carousel-item")];
 
-  let track = carousel.querySelector(".carousel-track");
-  if (!track) {
-    track = document.createElement("div");
-    track.className = "carousel-track";
-    items.forEach((i) => track.appendChild(i));
-    carousel.appendChild(track);
-  }
-
-  const controls = document.createElement("div");
-  controls.className = "carousel-controls";
-  items.forEach((_, i) => {
-    const dot = document.createElement("div");
-    dot.className = "carousel-dot" + (i === 0 ? " active" : "");
-    dot.dataset.index = i;
-    controls.appendChild(dot);
-  });
-  carousel.appendChild(controls);
-
-  let current = 0;
-  const widthCache = () => items[0].offsetWidth + 32;
-
-  function goTo(index) {
-    current = (index + items.length) % items.length;
-    const offset = -current * widthCache();
-    track.style.transform = `translateX(${offset}px)`;
-
-    controls
-      .querySelectorAll(".carousel-dot")
-      .forEach((d) => d.classList.remove("active"));
-    controls
-      .querySelector(`.carousel-dot[data-index="${current}"]`)
-      .classList.add("active");
-  }
-
-  // Auto-play
-  let autoTimer = setInterval(() => goTo(current + 1), 6000);
-  carousel.addEventListener("mouseenter", () => clearInterval(autoTimer));
-  carousel.addEventListener("mouseleave", () => {
-    autoTimer = setInterval(() => goTo(current + 1), 6000);
-  });
-
-  controls.addEventListener("click", (e) => {
-    const dot = e.target.closest(".carousel-dot");
-    if (!dot) return;
-    goTo(parseInt(dot.dataset.index, 10));
-  });
-
-  // Dragging
-  let startX = 0;
-  let dragging = false;
-  let startTranslate = 0;
-
-  carousel.addEventListener("pointerdown", (e) => {
-    dragging = true;
-    startX = e.clientX;
-    startTranslate = -current * widthCache();
-    track.style.transition = "none";
-  });
-
-  window.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const delta = e.clientX - startX;
-    track.style.transform = `translateX(${startTranslate + delta}px)`;
-  });
-
-  window.addEventListener("pointerup", (e) => {
-    if (!dragging) return;
-    dragging = false;
-    track.style.transition = "";
-    const delta = e.clientX - startX;
-    if (Math.abs(delta) > 80) {
-      goTo(current + (delta < 0 ? 1 : -1));
-    } else {
-      goTo(current);
+  // Si aucun item, ne rien initialiser et masquer la zone carousel
+  if (items.length === 0) {
+    // Optionnel: masquer le conteneur vide pour éviter un espace inutile
+    carousel.style.display = "none";
+  } else {
+    let track = carousel.querySelector(".carousel-track");
+    if (!track) {
+      track = document.createElement("div");
+      track.className = "carousel-track";
+      items.forEach((i) => track.appendChild(i));
+      carousel.appendChild(track);
     }
-  });
 
-  window.addEventListener("resize", () => goTo(current));
+    // Créer les contrôles uniquement si plus d'un item
+    let controls = null;
+    if (items.length > 1) {
+      controls = document.createElement("div");
+      controls.className = "carousel-controls";
+      items.forEach((_, i) => {
+        const dot = document.createElement("div");
+        dot.className = "carousel-dot" + (i === 0 ? " active" : "");
+        dot.dataset.index = i;
+        controls.appendChild(dot);
+      });
+      carousel.appendChild(controls);
+    }
 
-  goTo(0);
+    let current = 0;
+    const widthCache = () => (items[0] ? items[0].offsetWidth + 32 : 0);
+
+    function goTo(index) {
+      if (!items.length) return;
+      current = (index + items.length) % items.length;
+      const offset = -current * widthCache();
+      track.style.transform = `translateX(${offset}px)`;
+
+      if (controls) {
+        controls
+          .querySelectorAll(".carousel-dot")
+          .forEach((d) => d.classList.remove("active"));
+        const activeDot = controls.querySelector(
+          `.carousel-dot[data-index="${current}"]`
+        );
+        activeDot && activeDot.classList.add("active");
+      }
+    }
+
+    // Auto-play uniquement si plus d'un item
+    let autoTimer = null;
+    if (items.length > 1) {
+      autoTimer = setInterval(() => goTo(current + 1), 6000);
+      carousel.addEventListener("mouseenter", () => {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+      });
+      carousel.addEventListener("mouseleave", () => {
+        if (!autoTimer) autoTimer = setInterval(() => goTo(current + 1), 6000);
+      });
+    }
+
+    if (controls) {
+      controls.addEventListener("click", (e) => {
+        const dot = e.target.closest(".carousel-dot");
+        if (!dot) return;
+        goTo(parseInt(dot.dataset.index, 10));
+      });
+    }
+
+    // Dragging (activé uniquement si > 1 item)
+    if (items.length > 1) {
+      let startX = 0;
+      let dragging = false;
+      let startTranslate = 0;
+
+      const onPointerDown = (e) => {
+        dragging = true;
+        startX = e.clientX;
+        startTranslate = -current * widthCache();
+        track.style.transition = "none";
+        // Evite les sélections de texte pendant le drag
+        e.preventDefault();
+      };
+
+      const onPointerMove = (e) => {
+        if (!dragging) return;
+        const delta = e.clientX - startX;
+        track.style.transform = `translateX(${startTranslate + delta}px)`;
+      };
+
+      const endDrag = (e) => {
+        if (!dragging) return;
+        dragging = false;
+        track.style.transition = "";
+        const delta = e.clientX - startX;
+        if (Math.abs(delta) > 80) {
+          goTo(current + (delta < 0 ? 1 : -1));
+        } else {
+          goTo(current);
+        }
+      };
+
+      carousel.addEventListener("pointerdown", onPointerDown);
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", endDrag);
+      carousel.addEventListener("pointerleave", endDrag);
+      window.addEventListener("blur", endDrag);
+    }
+
+    window.addEventListener("resize", () => goTo(current));
+
+    goTo(0);
+  }
 }
 
 /* ================= SCROLL REVEAL ================= */

@@ -37,7 +37,8 @@
   </footer>
 
   <!-- JS -->
-  <script src="<?= base_url('assets/js/app.js') ?>"></script>
+  <?php $appJsV = @filemtime(__DIR__ . '/../../assets/js/app.js') ?: time(); ?>
+  <script src="<?= base_url('assets/js/app.js?v=' . $appJsV) ?>"></script>
 
   </body>
 

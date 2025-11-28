@@ -359,6 +359,231 @@
                 </div>
             <?php endif; ?>
         </div>
+
+        <div class="card" style="margin-top:1.25rem;">
+            <div class="card-body">
+                <h3 style="margin-top:0;">Vous aussi, témoignez</h3>
+                <style>
+                    .t-shell {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 16px;
+                        align-items: start;
+                        position: relative;
+                        z-index: 10;
+                    }
+
+                    @media (max-width: 900px) {
+                        .t-shell {
+                            grid-template-columns: 1fr;
+                        }
+                    }
+
+                    .preview-card {
+                        background: #fff;
+                        border: 1px solid #eee;
+                        border-radius: 12px;
+                        padding: 16px;
+                        box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+                    }
+
+                    .preview-author {
+                        display: flex;
+                        gap: 12px;
+                        align-items: center;
+                        margin-bottom: 8px;
+                    }
+
+                    .preview-avatar {
+                        width: 54px;
+                        height: 54px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        background: #f5f5f5;
+                        border: 1px solid #eee;
+                        box-shadow: var(--shadow-sm);
+                        cursor: pointer;
+                    }
+
+                    .preview-name {
+                        font-weight: 600;
+                        margin: 0;
+                    }
+
+                    .preview-role {
+                        color: #666;
+                        font-size: 14px;
+                        margin: 0;
+                    }
+
+                    .preview-msg {
+                        margin-top: 8px;
+                        font-size: 16px;
+                        line-height: 1.5;
+                    }
+
+                    .form-stack {
+                        display: grid;
+                        gap: 12px;
+                    }
+
+                    .form-row {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 12px;
+                    }
+
+                    @media (max-width: 600px) {
+                        .form-row {
+                            grid-template-columns: 1fr;
+                        }
+                    }
+
+                    .form-control,
+                    .textarea-control {
+                        width: 100%;
+                        padding: 10px 12px;
+                        border: 1px solid #d9d9d9;
+                        border-radius: 10px;
+                        outline: none;
+                        background: #fff;
+                    }
+
+                    .form-control:focus,
+                    .textarea-control:focus {
+                        border-color: #1677ff;
+                        box-shadow: 0 0 0 3px rgba(22, 119, 255, .12);
+                    }
+
+                    .textarea-control {
+                        resize: vertical;
+                        min-height: 100px;
+                    }
+
+                    .file-input {
+                        padding: 10px;
+                        border: 1px dashed #cbd5e1;
+                        border-radius: 10px;
+                        background: #fafafa;
+                        display: block;
+                        cursor: pointer;
+                    }
+
+                    .muted {
+                        color: #666;
+                    }
+
+                    .alert-success {
+                        background: #f6ffed;
+                        border: 1px solid #b7eb8f;
+                        color: #237804;
+                        padding: 10px 12px;
+                        border-radius: 8px;
+                        margin-bottom: 8px;
+                    }
+
+                    .alert-error {
+                        background: #fff1f0;
+                        border: 1px solid #ffa39e;
+                        color: #a8071a;
+                        padding: 10px 12px;
+                        border-radius: 8px;
+                        margin-bottom: 8px;
+                    }
+
+                    #pv-avatar {
+                        height: 56px;
+                        width: 56px;
+                    }
+                </style>
+                <?php if (isset($_GET['tks']) && $_GET['tks'] == '1'): ?>
+                    <div class="alert-success">Merci ! Votre témoignage sera publié après validation.</div>
+                <?php elseif (isset($_GET['tks']) && $_GET['tks'] == '0'): ?>
+                    <div class="alert-error">Veuillez renseigner au moins votre nom et votre témoignage.</div>
+                <?php endif; ?>
+
+                <div class="t-shell">
+                    <!-- Aperçu en temps réel -->
+                    <div class="preview-card" aria-live="polite">
+                        <div class="preview-author">
+                            <img id="pv-avatar" class="preview-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop" alt="Avatar">
+                            <div>
+                                <p id="pv-name" class="preview-name">Votre nom</p>
+                                <p id="pv-role" class="preview-role">Rôle (ex: Alumni – Management)</p>
+                            </div>
+                        </div>
+                        <p id="pv-message" class="preview-msg">“Partagez votre expérience IFMAP…”</p>
+                    </div>
+
+                    <!-- Formulaire -->
+                    <form class="t-form" method="post" enctype="multipart/form-data" action="<?= base_url('/temoignages/soumettre') ?>">
+                        <?= csrf_field() ?>
+                        <div class="form-stack">
+                            <div class="form-row">
+                                <div>
+                                    <label>Nom *</label>
+                                    <input id="t-name" class="form-control" type="text" name="name" required placeholder="Votre nom" />
+                                </div>
+                                <div>
+                                    <label>Rôle</label>
+                                    <input id="t-role" class="form-control" type="text" name="role" placeholder="Alumni – Management" />
+                                </div>
+                            </div>
+                            <div>
+                                <label>Message *</label>
+                                <textarea id="t-message" class="textarea-control" name="message" rows="3" required placeholder="Partagez votre expérience IFMAP…"></textarea>
+                            </div>
+                            <div>
+                                <label>Photo (optionnel)</label>
+                                <input id="t-avatar" class="file-input" type="file" name="avatar_file" accept="image/*" />
+                                <div class="muted" style="margin-top:6px; font-size:12px;">JPG/PNG/WebP, 2 Mo max.</div>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center; margin-top:4px;">
+                                <button class="btn-primary" type="submit">Envoyer</button>
+                                <small class="muted">Votre témoignage sera publié après modération.</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <script>
+                    (function() {
+                        const $ = s => document.querySelector(s);
+                        const nameI = $('#t-name');
+                        const roleI = $('#t-role');
+                        const msgI = $('#t-message');
+                        const avatarI = $('#t-avatar');
+                        const pvName = $('#pv-name');
+                        const pvRole = $('#pv-role');
+                        const pvMsg = $('#pv-message');
+                        const pvAvatar = $('#pv-avatar');
+                        const sync = () => {
+                            pvName.textContent = nameI.value.trim() || 'Votre nom';
+                            pvRole.textContent = roleI.value.trim() || 'Rôle (ex: Alumni – Management)';
+                            const t = msgI.value.trim();
+                            pvMsg.textContent = t ? '“' + t + '”' : '“Partagez votre expérience IFMAP…”';
+                        };
+                        nameI.addEventListener('input', sync);
+                        roleI.addEventListener('input', sync);
+                        msgI.addEventListener('input', sync);
+                        // Clicking the avatar preview opens the file picker
+                        pvAvatar.addEventListener('click', function() {
+                            avatarI.click();
+                        });
+                        avatarI.addEventListener('change', function() {
+                            if (this.files && this.files[0]) {
+                                const file = this.files[0];
+                                const reader = new FileReader();
+                                reader.onload = e => {
+                                    pvAvatar.src = e.target.result;
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        });
+                    })();
+                </script>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -450,20 +675,23 @@
         </div>
     </div>
     <div style="margin:.6rem 0">
-        <!-- Tawk.to widget activé -->
-        <script type="text/javascript">
-            var Tawk_API = Tawk_API || {},
-                Tawk_LoadStart = new Date();
-            (function() {
-                var s1 = document.createElement("script"),
-                    s0 = document.getElementsByTagName("script")[0];
-                s1.async = true;
-                s1.src = 'https://embed.tawk.to/6928cda30d02891959544218/1jb3m6i8h';
-                s1.charset = 'UTF-8';
-                s1.setAttribute('crossorigin', '*');
-                s0.parentNode.insertBefore(s1, s0);
-            })();
-        </script>
+        <?php $host = $_SERVER['HTTP_HOST'] ?? '';
+        if (stripos($host, 'localhost') === false) : ?>
+            <!-- Tawk.to widget activé (désactivé en localhost) -->
+            <script type="text/javascript">
+                var Tawk_API = Tawk_API || {},
+                    Tawk_LoadStart = new Date();
+                (function() {
+                    var s1 = document.createElement("script"),
+                        s0 = document.getElementsByTagName("script")[0];
+                    s1.async = true;
+                    s1.src = 'https://embed.tawk.to/6928cda30d02891959544218/1jb3m6i8h';
+                    s1.charset = 'UTF-8';
+                    s1.setAttribute('crossorigin', '*');
+                    s0.parentNode.insertBefore(s1, s0);
+                })();
+            </script>
+        <?php endif; ?>
         <!-- Crisp chat (optionnel) -->
         <!--
                         <script type="text/javascript">

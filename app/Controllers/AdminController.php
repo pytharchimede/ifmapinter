@@ -632,6 +632,43 @@ class AdminController
         header('Location: ' . base_url('/admin/partners'));
         return '';
     }
+    // Testimonials (modération)
+    public function testimonialsIndex(): string
+    {
+        $items = db()->query('SELECT * FROM testimonials ORDER BY id DESC')->fetchAll();
+        $title = 'Admin – Témoignages';
+        return view('admin/testimonials/index', compact('title', 'items'));
+    }
+    public function testimonialsApprove(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare("UPDATE testimonials SET status='approved' WHERE id=?");
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/testimonials'));
+        return '';
+    }
+    public function testimonialsReject(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare("UPDATE testimonials SET status='rejected' WHERE id=?");
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/testimonials'));
+        return '';
+    }
+    public function testimonialsDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('DELETE FROM testimonials WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/testimonials'));
+        return '';
+    }
     // Media (Galerie)
     public function mediaIndex(): string
     {

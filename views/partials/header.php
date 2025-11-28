@@ -7,7 +7,8 @@
     <title><?= isset($title) ? htmlspecialchars($title) : 'IFMAP' ?></title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
+    <?php $cssV = @filemtime(__DIR__ . '/../../assets/css/style.css') ?: time(); ?>
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css?v=' . $cssV) ?>">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">

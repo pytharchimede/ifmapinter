@@ -209,6 +209,18 @@ class Database
         } catch (\PDOException $e) {
             // Ignore silently if check fails; do not block migration
         }
+
+        // Patch: ajouter colonne `status` sur testimonials (modération)
+        try {
+            $existsStmt = $pdo->prepare('SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+            $existsStmt->execute(['testimonials', 'status']);
+            $colExists = (bool)$existsStmt->fetchColumn();
+            if (!$colExists) {
+                $pdo->exec("ALTER TABLE testimonials ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'pending' AFTER avatar_url");
+            }
+        } catch (\PDOException $e) {
+            // Ignore silently
+        }
     }
 
     private static function fatal(string $message): void
