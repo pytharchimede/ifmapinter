@@ -32,13 +32,33 @@ class AdminController
     public function newsStore(): string
     {
         require_csrf();
-        $st = db()->prepare('INSERT INTO news(title, body, image_url, published_at) VALUES(?,?,?,?)');
-        $st->execute([
-            trim($_POST['title'] ?? ''),
-            trim($_POST['body'] ?? ''),
-            trim($_POST['image_url'] ?? ''),
-            trim($_POST['published_at'] ?? null) ?: null,
-        ]);
+        $title = trim($_POST['title'] ?? '');
+        $body = trim($_POST['body'] ?? '');
+        $status = in_array($_POST['status'] ?? 'published', ['draft', 'published']) ? $_POST['status'] : 'published';
+        $published_at = trim($_POST['published_at'] ?? null) ?: null;
+        $source = substr(trim($_POST['source'] ?? ''), 0, 200);
+        $article_url = substr(trim($_POST['article_url'] ?? ''), 0, 500);
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/news';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('n_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/news/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/news');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO news(title, body, image_url, status, published_at, source, article_url) VALUES(?,?,?,?,?,?,?)');
+        $st->execute([$title, $body, $image_url, $status, $published_at, $source, $article_url]);
         header('Location: ' . base_url('/admin/news'));
         return '';
     }
@@ -46,14 +66,33 @@ class AdminController
     {
         require_csrf();
         $id = (int)($_POST['id'] ?? 0);
-        $st = db()->prepare('UPDATE news SET title=?, body=?, image_url=?, published_at=? WHERE id=?');
-        $st->execute([
-            trim($_POST['title'] ?? ''),
-            trim($_POST['body'] ?? ''),
-            trim($_POST['image_url'] ?? ''),
-            trim($_POST['published_at'] ?? null) ?: null,
-            $id
-        ]);
+        $title = trim($_POST['title'] ?? '');
+        $body = trim($_POST['body'] ?? '');
+        $status = in_array($_POST['status'] ?? 'published', ['draft', 'published']) ? $_POST['status'] : 'published';
+        $published_at = trim($_POST['published_at'] ?? null) ?: null;
+        $source = substr(trim($_POST['source'] ?? ''), 0, 200);
+        $article_url = substr(trim($_POST['article_url'] ?? ''), 0, 500);
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/news';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('n_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/news/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/news');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE news SET title=?, body=?, image_url=?, status=?, published_at=?, source=?, article_url=? WHERE id=?');
+        $st->execute([$title, $body, $image_url, $status, $published_at, $source, $article_url, $id]);
         header('Location: ' . base_url('/admin/news'));
         return '';
     }
@@ -65,6 +104,104 @@ class AdminController
             $st->execute([$id]);
         }
         header('Location: ' . base_url('/admin/news'));
+        return '';
+    }
+
+    // RSS Sources management
+    public function rssSourcesIndex(): string
+    {
+        $items = db()->query('SELECT * FROM rss_sources ORDER BY id DESC')->fetchAll();
+        $title = 'Admin – Sources RSS';
+        return view('admin/rss/index', compact('title', 'items'));
+    }
+    public function rssIngest(): string
+    {
+        require_csrf();
+        // Fetch enabled sources and insert top items into news
+        $rows = db()->query('SELECT name, url FROM rss_sources WHERE enabled=1 ORDER BY id DESC')->fetchAll();
+        $inserted = 0;
+        foreach ($rows as $r) {
+            $name = $r['name'];
+            $url = $r['url'];
+            try {
+                $xml = @simplexml_load_file($url, "SimpleXMLElement", LIBXML_NOCDATA);
+                if ($xml && isset($xml->channel->item)) {
+                    foreach ($xml->channel->item as $it) {
+                        $title = (string)$it->title;
+                        $link = (string)$it->link;
+                        $pub = (string)$it->pubDate;
+                        $pubDate = $pub ? date('Y-m-d H:i:s', strtotime($pub)) : null;
+                        $desc = trim(strip_tags((string)$it->description));
+                        // Skip if already exists by link
+                        $chk = db()->prepare('SELECT COUNT(*) FROM news WHERE article_url=?');
+                        $chk->execute([$link]);
+                        if ((int)$chk->fetchColumn() > 0) continue;
+                        $st = db()->prepare('INSERT INTO news(title, body, image_url, status, published_at, source, article_url) VALUES(?,?,?,?,?,?,?)');
+                        $st->execute([$title, $desc, '', 'published', $pubDate, $name, $link]);
+                        $inserted++;
+                    }
+                }
+            } catch (\Throwable $e) { /* ignore */
+            }
+        }
+        $title = 'Admin – Sources RSS';
+        $items = db()->query('SELECT * FROM rss_sources ORDER BY id DESC')->fetchAll();
+        $success = $inserted > 0 ? ("$inserted articles importés.") : 'Aucun nouvel article.';
+        return view('admin/rss/index', compact('title', 'items', 'success'));
+    }
+    public function rssSourcesForm(): string
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $item = null;
+        if ($id) {
+            $st = db()->prepare('SELECT * FROM rss_sources WHERE id=?');
+            $st->execute([$id]);
+            $item = $st->fetch();
+        }
+        $title = $id ? 'Modifier Source RSS' : 'Ajouter Source RSS';
+        return view('admin/rss/form', compact('title', 'item'));
+    }
+    public function rssSourcesStore(): string
+    {
+        require_csrf();
+        $name = trim($_POST['name'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $enabled = (int)($_POST['enabled'] ?? 1) ? 1 : 0;
+        $st = db()->prepare('INSERT INTO rss_sources(name, url, enabled, created_at) VALUES(?,?,?,NOW())');
+        $st->execute([$name, $url, $enabled]);
+        header('Location: ' . base_url('/admin/rss-sources'));
+        return '';
+    }
+    public function rssSourcesUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $name = trim($_POST['name'] ?? '');
+        $url = trim($_POST['url'] ?? '');
+        $enabled = (int)($_POST['enabled'] ?? 1) ? 1 : 0;
+        $st = db()->prepare('UPDATE rss_sources SET name=?, url=?, enabled=? WHERE id=?');
+        $st->execute([$name, $url, $enabled, $id]);
+        header('Location: ' . base_url('/admin/rss-sources'));
+        return '';
+    }
+    public function rssSourcesToggle(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('UPDATE rss_sources SET enabled=1-enabled WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/rss-sources'));
+        return '';
+    }
+    public function rssSourcesDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('DELETE FROM rss_sources WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/rss-sources'));
         return '';
     }
 

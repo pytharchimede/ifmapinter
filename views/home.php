@@ -229,41 +229,52 @@
         </div>
 
         <div class="carousel" id="carousel">
-            <?php if (!empty($news)): ?>
-                <?php foreach ($news as $n): ?>
-                    <div class="carousel-item">
-                        <img loading="lazy" src="<?= htmlspecialchars($n['image_url'] ?? 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02') ?>">
-                        <div class="info">
-                            <h3><?= htmlspecialchars($n['title']) ?></h3>
-                            <p><?= htmlspecialchars(mb_strimwidth($n['body'] ?? '', 0, 180, '…')) ?></p>
-                            <a class="btn-outline" href="<?= base_url('actualites/article?id=' . (int)$n['id']) ?>">Lire l’article →</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
+            <?php foreach ($news ?? [] as $n): ?>
                 <div class="carousel-item">
-                    <img loading="lazy" src="https://images.unsplash.com/photo-1498079022511-d15614cb1c02">
+                    <img loading="lazy" src="<?= htmlspecialchars($n['image_url'] ?? 'https://images.unsplash.com/photo-1498079022511-d15614cb1c02') ?>">
                     <div class="info">
-                        <h3>Session 2025 ouverte</h3>
-                        <p>Les pré-inscriptions sont disponibles.</p>
+                        <h3><?= htmlspecialchars($n['title']) ?></h3>
+                        <p><?= htmlspecialchars(mb_strimwidth($n['body'] ?? '', 0, 180, '…')) ?></p>
+                        <a class="btn-outline" href="<?= base_url('actualites/article?id=' . (int)$n['id']) ?>">Lire l’article →</a>
                     </div>
                 </div>
-                <div class="carousel-item">
-                    <img loading="lazy" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f">
-                    <div class="info">
-                        <h3>Journée Portes Ouvertes</h3>
-                        <p>Découvrez les métiers d’avenir.</p>
-                    </div>
-                </div>
-                <div class="carousel-item">
-                    <img loading="lazy" src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0">
-                    <div class="info">
-                        <h3>Partenariat Entreprises</h3>
-                        <p>De nouvelles opportunités pour nos diplômés.</p>
-                    </div>
+            <?php endforeach; ?>
+            <?php if (empty($news ?? [])): ?>
+                <div class="info" style="text-align:center;padding:16px;">
+                    <p>Aucune actualité pour le moment. Revenez bientôt.</p>
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php
+        // Aperçu des actualités du monde (RSS cache) pour inciter à consulter
+        $rssPreview = [];
+        try {
+            $rows = db()->query("SELECT title, link, description FROM rss_items_cache WHERE expires_at > NOW() ORDER BY pub_date DESC LIMIT 6")->fetchAll();
+            $rssPreview = $rows ?: [];
+        } catch (Throwable $e) {
+        }
+        ?>
+        <?php if (!empty($rssPreview)): ?>
+            <div class="section-title" style="margin-top:2rem;">
+                <h3>Actualités du monde</h3>
+                <p>Extrait des flux RSS externes</p>
+            </div>
+            <div class="grid-3">
+                <?php foreach ($rssPreview as $r): ?>
+                    <div class="card">
+                        <div class="card-body">
+                            <h4><?= htmlspecialchars($r['title']) ?></h4>
+                            <p><?= htmlspecialchars(mb_strimwidth($r['description'] ?? '', 0, 160, '…')) ?></p>
+                            <a class="btn-outline" href="<?= htmlspecialchars($r['link']) ?>" target="_blank" rel="noopener">Ouvrir la source →</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <div style="margin-top:12px;">
+                <a class="btn" href="<?= base_url('actualites') ?>" onclick="localStorage.setItem('newsTab','world');">Voir plus d'actualités du monde</a>
+            </div>
+        <?php endif; ?>
 
     </div>
 </section>

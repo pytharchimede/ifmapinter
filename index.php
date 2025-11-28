@@ -180,6 +180,88 @@ try {
   // ignore centres migration errors
 }
 
+// Ensure 'news' table has status column for draft/published and image_url
+try {
+  $newsTable = db()->query("SHOW TABLES LIKE 'news'")->fetchColumn();
+  if ($newsTable) {
+    $cols = db()->query("SHOW COLUMNS FROM news")->fetchAll(PDO::FETCH_COLUMN);
+    $addN = function ($sql) {
+      db()->exec($sql);
+    };
+    if (!in_array('status', $cols)) $addN("ALTER TABLE news ADD COLUMN status VARCHAR(20) NULL DEFAULT 'published' AFTER image_url");
+    if (!in_array('image_url', $cols)) $addN("ALTER TABLE news ADD COLUMN image_url VARCHAR(500) NULL AFTER body");
+    if (!in_array('published_at', $cols)) $addN("ALTER TABLE news ADD COLUMN published_at DATETIME NULL AFTER status");
+    if (!in_array('source', $cols)) $addN("ALTER TABLE news ADD COLUMN source VARCHAR(200) NULL AFTER published_at");
+    if (!in_array('article_url', $cols)) $addN("ALTER TABLE news ADD COLUMN article_url VARCHAR(500) NULL AFTER source");
+  }
+} catch (Throwable $e) {
+  // ignore news migration errors
+}
+
+// RSS sources table
+try {
+  $rssTable = db()->query("SHOW TABLES LIKE 'rss_sources'")->fetchColumn();
+  if (!$rssTable) {
+    db()->exec(
+      "CREATE TABLE rss_sources (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        url VARCHAR(500) NOT NULL,
+        enabled TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  }
+} catch (Throwable $e) {
+  // ignore rss_sources migration errors
+}
+
+// RSS items cache table
+try {
+  $rssCache = db()->query("SHOW TABLES LIKE 'rss_items_cache'")->fetchColumn();
+  if (!$rssCache) {
+    db()->exec(
+      "CREATE TABLE rss_items_cache (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        source_url VARCHAR(500) NOT NULL,
+        title VARCHAR(500) NOT NULL,
+        link VARCHAR(500) NOT NULL,
+        pub_date DATETIME NULL,
+        description TEXT NULL,
+        fetched_at DATETIME NOT NULL,
+        expires_at DATETIME NOT NULL,
+        INDEX idx_source_url (source_url),
+        INDEX idx_expires (expires_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  }
+} catch (Throwable $e) {
+  // ignore rss cache migration errors
+}
+
+// Seed default reliable French RSS sources if none exist
+try {
+  $rssTable = db()->query("SHOW TABLES LIKE 'rss_sources'")->fetchColumn();
+  if ($rssTable) {
+    $rcount = (int)db()->query('SELECT COUNT(*) FROM rss_sources')->fetchColumn();
+    if ($rcount === 0) {
+      $sources = [
+        ['Gouvernement français', 'https://www.gouvernement.fr/actualites.rss'],
+        ['France 24', 'https://www.france24.com/fr/rss'],
+        ['France Info', 'https://www.francetvinfo.fr/titres.rss'],
+        ['Le Monde', 'https://www.lemonde.fr/rss/une.xml'],
+        ['TV5 Monde', 'https://information.tv5monde.com/rss'],
+      ];
+      $ins = db()->prepare('INSERT INTO rss_sources(name, url, enabled, created_at) VALUES(?,?,1,NOW())');
+      foreach ($sources as $s) {
+        $ins->execute([$s[0], $s[1]]);
+      }
+    }
+  }
+} catch (Throwable $e) {
+  // ignore rss seed errors
+}
+
 // Seed initial centres if empty
 try {
   $centExists = db()->query("SHOW TABLES LIKE 'centres'")->fetchColumn();
@@ -290,6 +372,17 @@ $router->get('/admin/media/delete', fn() => require_auth(fn() => (new AdminContr
 $router->get('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordForm()));
 $router->post('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordUpdate()));
 
+// Admin RSS sources
+$router->get('/admin/rss-sources', fn() => require_auth(fn() => (new AdminController())->rssSourcesIndex()));
+$router->get('/admin/rss-sources/create', fn() => require_auth(fn() => (new AdminController())->rssSourcesForm()));
+$router->post('/admin/rss-sources/create', fn() => require_auth(fn() => (new AdminController())->rssSourcesStore()));
+$router->get('/admin/rss-sources/edit', fn() => require_auth(fn() => (new AdminController())->rssSourcesForm()));
+$router->post('/admin/rss-sources/edit', fn() => require_auth(fn() => (new AdminController())->rssSourcesUpdate()));
+$router->get('/admin/rss-sources/toggle', fn() => require_auth(fn() => (new AdminController())->rssSourcesToggle()));
+$router->get('/admin/rss-sources/delete', fn() => require_auth(fn() => (new AdminController())->rssSourcesDelete()));
+// Ingest RSS items into news
+$router->post('/admin/rss-sources/ingest', fn() => require_auth(fn() => (new AdminController())->rssIngest()));
+
 // Admin Centres (Instituts & Centres IFMAP)
 $router->get('/admin/centres', fn() => require_auth(fn() => (new AdminController())->centresIndex()));
 $router->get('/admin/centres/create', fn() => require_auth(fn() => (new AdminController())->centresForm()));
@@ -303,7 +396,56 @@ $router->post('/admin/centres/section/save', fn() => require_auth(fn() => (new A
 // Pages publiques listes
 $router->get('/actualites', fn() => view('public/news', [
   'title' => 'Actualités',
-  'items' => db()->query('SELECT * FROM news ORDER BY COALESCE(published_at, created_at) DESC')->fetchAll()
+  'items' => db()->query("SELECT * FROM news WHERE COALESCE(status,'published')='published' ORDER BY COALESCE(published_at, created_at) DESC")->fetchAll(),
+  'rss' => (function () {
+    // Load enabled RSS sources from DB with cache
+    $rows = db()->query('SELECT url FROM rss_sources WHERE enabled=1 ORDER BY id DESC')->fetchAll();
+    $items = [];
+    $now = new DateTime('now');
+    $ttlMinutes = 30; // cache TTL
+    foreach ($rows as $r) {
+      $url = $r['url'];
+      // Try to read cache first
+      $stc = db()->prepare('SELECT title, link, pub_date, description FROM rss_items_cache WHERE source_url=? AND expires_at > ? ORDER BY pub_date DESC LIMIT 6');
+      $stc->execute([$url, $now->format('Y-m-d H:i:s')]);
+      $cached = $stc->fetchAll();
+      if (!empty($cached)) {
+        foreach ($cached as $c) {
+          $items[] = [
+            'title' => $c['title'],
+            'link' => $c['link'],
+            'pubDate' => $c['pub_date'],
+            'description' => $c['description'],
+          ];
+        }
+        continue;
+      }
+      // Fetch and populate cache
+      try {
+        $xml = @simplexml_load_file($url);
+        if ($xml && isset($xml->channel->item)) {
+          $ins = db()->prepare('INSERT INTO rss_items_cache(source_url,title,link,pub_date,description,fetched_at,expires_at) VALUES(?,?,?,?,?,?,?)');
+          $expires = (clone $now)->modify('+' . $ttlMinutes . ' minutes')->format('Y-m-d H:i:s');
+          foreach ($xml->channel->item as $it) {
+            $title = (string)$it->title;
+            $link = (string)$it->link;
+            $pub = (string)$it->pubDate;
+            $pubDate = $pub ? date('Y-m-d H:i:s', strtotime($pub)) : null;
+            $desc = strip_tags((string)$it->description);
+            $ins->execute([$url, $title, $link, $pubDate, $desc, $now->format('Y-m-d H:i:s'), $expires]);
+            $items[] = [
+              'title' => $title,
+              'link' => $link,
+              'pubDate' => $pubDate,
+              'description' => $desc,
+            ];
+          }
+        }
+      } catch (Throwable $e) { /* ignore */
+      }
+    }
+    return array_slice($items, 0, 6);
+  })()
 ]));
 $router->get('/actualites/article', function () {
   $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
