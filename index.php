@@ -252,6 +252,49 @@ try {
   // ignore partners migration errors
 }
 
+// Ensure event registrations table exists (for internal inscription fallback)
+try {
+  $regTable = db()->query("SHOW TABLES LIKE 'event_registrations'")->fetchColumn();
+  if (!$regTable) {
+    db()->exec(
+      "CREATE TABLE event_registrations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_id INT NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        email VARCHAR(200) NULL,
+        phone VARCHAR(60) NULL,
+        message TEXT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_event (event_id),
+        CONSTRAINT fk_event_reg FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  }
+  // Add missing columns (status, consent) progressively
+  $regCols = db()->query("SHOW COLUMNS FROM event_registrations")->fetchAll(PDO::FETCH_COLUMN);
+  if (!in_array('status', $regCols)) {
+    db()->exec("ALTER TABLE event_registrations ADD COLUMN status VARCHAR(20) NULL DEFAULT 'pending' AFTER message");
+  }
+  if (!in_array('consent', $regCols)) {
+    db()->exec("ALTER TABLE event_registrations ADD COLUMN consent TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+  }
+} catch (Throwable $e) {
+  // ignore registrations migration errors
+}
+
+// Ensure events table has capacity column
+try {
+  $evtTable = db()->query("SHOW TABLES LIKE 'events'")->fetchColumn();
+  if ($evtTable) {
+    $evtCols = db()->query("SHOW COLUMNS FROM events")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('capacity', $evtCols)) {
+      db()->exec("ALTER TABLE events ADD COLUMN capacity INT NULL AFTER enabled");
+    }
+  }
+} catch (Throwable $e) {
+  // ignore events capacity migration errors
+}
+
 // Seed default reliable French RSS sources if none exist
 try {
   $rssTable = db()->query("SHOW TABLES LIKE 'rss_sources'")->fetchColumn();
@@ -399,6 +442,69 @@ $router->get('/evenements/ics', function () {
   echo $ics;
   return '';
 });
+$router->get('/evenements/inscription', function () {
+  $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+  if ($id <= 0) return view('errors/404', ['title' => 'Événement introuvable']);
+  $st = db()->prepare('SELECT * FROM events WHERE id=?');
+  $st->execute([$id]);
+  $event = $st->fetch();
+  if (!$event) return view('errors/404', ['title' => 'Événement introuvable']);
+  return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'event' => $event]);
+});
+$router->post('/evenements/inscription', function () {
+  require_csrf();
+  $id = (int)($_POST['event_id'] ?? 0);
+  $st = db()->prepare('SELECT id,title FROM events WHERE id=?');
+  $st->execute([$id]);
+  $event = $st->fetch();
+  if (!$event) {
+    $error = 'Événement introuvable.';
+    return view('public/event_register', ['title' => 'Inscription', 'error' => $error, 'event' => null]);
+  }
+  $name = substr(trim($_POST['name'] ?? ''), 0, 190);
+  $email = substr(trim($_POST['email'] ?? ''), 0, 190);
+  $phone = substr(trim($_POST['phone'] ?? ''), 0, 60);
+  $message = trim($_POST['message'] ?? '');
+  $consent = isset($_POST['consent']) ? 1 : 0;
+  if ($name === '') {
+    $error = 'Veuillez renseigner votre nom.';
+    return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'error' => $error, 'event' => $event]);
+  }
+  // Capacity check
+  $evtInfo = db()->prepare('SELECT capacity FROM events WHERE id=?');
+  $evtInfo->execute([$event['id']]);
+  $capRow = $evtInfo->fetch();
+  $capacity = $capRow && $capRow['capacity'] !== null ? (int)$capRow['capacity'] : null;
+  if ($capacity !== null) {
+    $cntStmt = db()->prepare("SELECT COUNT(*) FROM event_registrations WHERE event_id=? AND status!='cancelled'");
+    $cntStmt->execute([$event['id']]);
+    $current = (int)$cntStmt->fetchColumn();
+    if ($current >= $capacity) {
+      $error = 'Désolé, cet événement est complet.';
+      return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'error' => $error, 'event' => $event]);
+    }
+  }
+  $ins = db()->prepare('INSERT INTO event_registrations(event_id,name,email,phone,message,status,consent) VALUES(?,?,?,?,?,?,?)');
+  $ins->execute([$event['id'], $name, $email, $phone, $message, 'pending', $consent]);
+  $regId = db()->lastInsertId();
+  // Emails (best effort)
+  if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $subject = 'Confirmation inscription – ' . $event['title'];
+    $body = "Bonjour $name,\n\nVotre inscription à l'événement \"" . $event['title'] . "\" est enregistrée (statut: en attente).\nNous vous confirmerons prochainement.\n\nCordialement,\nIFMAP";
+    @mail($email, $subject, $body);
+  }
+  $adminEmail = (function () {
+    $cfg = config();
+    return $cfg['admin_email'] ?? '';
+  })();
+  if ($adminEmail && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+    $subjectA = 'Nouvelle inscription événement #' . $event['id'];
+    $bodyA = "Événement: " . $event['title'] . "\nNom: $name\nEmail: $email\nTéléphone: $phone\nConsentement: " . ($consent ? 'Oui' : 'Non') . "\nMessage:\n$message";
+    @mail($adminEmail, $subjectA, $bodyA);
+  }
+  $success = 'Inscription enregistrée. Merci !';
+  return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'success' => $success, 'event' => $event]);
+});
 $router->post('/temoignages/soumettre', fn() => (new HomeController())->submitTestimonial());
 
 // Auth
@@ -415,6 +521,11 @@ $router->get('/admin/events/edit', fn() => require_auth(fn() => (new AdminContro
 $router->post('/admin/events/edit', fn() => require_auth(fn() => (new AdminController())->eventsUpdate()));
 $router->get('/admin/events/delete', fn() => require_auth(fn() => (new AdminController())->eventsDelete()));
 $router->get('/admin/events/toggle', fn() => require_auth(fn() => (new AdminController())->eventsToggle()));
+$router->get('/admin/events/registrations', fn() => require_auth(fn() => (new AdminController())->eventRegistrationsIndex()));
+$router->get('/admin/events/registrations/export', fn() => require_auth(fn() => (new AdminController())->eventRegistrationsExport()));
+$router->get('/admin/events/registrations/status', fn() => require_auth(fn() => (new AdminController())->eventRegistrationStatus()));
+$router->get('/admin/events/registrations/create', fn() => require_auth(fn() => (new AdminController())->eventRegistrationCreateForm()));
+$router->post('/admin/events/registrations/create', fn() => require_auth(fn() => (new AdminController())->eventRegistrationStore()));
 $router->get('/admin/news', fn() => require_auth(fn() => (new AdminController())->newsIndex()));
 $router->get('/admin/news/create', fn() => require_auth(fn() => (new AdminController())->newsForm()));
 $router->post('/admin/news/create', fn() => require_auth(fn() => (new AdminController())->newsStore()));
@@ -453,6 +564,51 @@ $router->get('/admin/media/delete', fn() => require_auth(fn() => (new AdminContr
 // Admin sécurité
 $router->get('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordForm()));
 $router->post('/admin/password', fn() => require_auth(fn() => (new AdminController())->passwordUpdate()));
+
+// Site settings (logo, contact, socials)
+try {
+  $setTable = db()->query("SHOW TABLES LIKE 'settings'")->fetchColumn();
+  if (!$setTable) {
+    db()->exec(
+      "CREATE TABLE settings (
+        id INT PRIMARY KEY DEFAULT 1,
+        logo_url VARCHAR(500) NULL,
+        contact_email VARCHAR(200) NULL,
+        contact_phone VARCHAR(60) NULL,
+        contact_address VARCHAR(300) NULL,
+        link_programmes VARCHAR(300) NULL,
+        link_formations VARCHAR(300) NULL,
+        link_actualites VARCHAR(300) NULL,
+        link_partenaires VARCHAR(300) NULL,
+        social_facebook VARCHAR(300) NULL,
+        social_linkedin VARCHAR(300) NULL,
+        social_youtube VARCHAR(300) NULL,
+        newsletter_text VARCHAR(500) NULL,
+        newsletter_url VARCHAR(300) NULL,
+        platform_url VARCHAR(300) NULL,
+        updated_at DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+    db()->exec("INSERT INTO settings(id, updated_at) VALUES(1, NOW())");
+  }
+} catch (Throwable $e) { /* ignore settings migration */
+
+  // Newsletter subscriptions table
+  try {
+    $subTable = db()->query("SHOW TABLES LIKE 'newsletter_subscriptions'")->fetchColumn();
+    if (!$subTable) {
+      db()->exec(
+        "CREATE TABLE newsletter_subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(200) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_email (email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+      );
+    }
+  } catch (Throwable $e) { /* ignore newsletter migration */
+  }
+}
 
 // Admin Témoignages (modération)
 $router->get('/admin/testimonials', fn() => require_auth(fn() => (new AdminController())->testimonialsIndex()));
@@ -658,6 +814,33 @@ $router->post('/admin/carousels/order', fn() => require_auth(fn() => (new AdminC
 
 // TinyMCE upload endpoint
 $router->post('/admin/upload', fn() => require_auth(fn() => (new AdminController())->adminUpload()));
+
+// Admin Settings
+$router->get('/admin/settings', fn() => require_auth(fn() => (new AdminController())->settingsForm()));
+$router->post('/admin/settings', fn() => require_auth(fn() => (new AdminController())->settingsSave()));
+
+// Newsletter subscribe endpoint
+$router->post('/newsletter/subscribe', function () {
+  require_csrf();
+  $email = substr(trim($_POST['email'] ?? ''), 0, 200);
+  $ok = false;
+  $msg = '';
+  if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    try {
+      $st = db()->prepare('INSERT INTO newsletter_subscriptions(email) VALUES(?)');
+      $st->execute([$email]);
+      $ok = true;
+      $msg = 'Inscription réussie';
+    } catch (Throwable $e) {
+      $msg = 'Cette adresse est déjà inscrite';
+    }
+  } else {
+    $msg = 'Adresse email invalide';
+  }
+  header('Content-Type: application/json');
+  echo json_encode(['ok' => $ok, 'message' => $msg]);
+  return '';
+});
 
 // Admin Formations section params save
 $router->post('/admin/formations/section/save', fn() => require_auth(fn() => (new AdminController())->formationsSectionSave()));

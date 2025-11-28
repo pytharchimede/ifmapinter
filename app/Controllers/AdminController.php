@@ -7,13 +7,60 @@ class AdminController
     public function dashboard(): string
     {
         $title = 'Admin – Tableau de bord';
-        return view('admin/dashboard', compact('title'));
+        // Metrics
+        $totalEvents = 0;
+        $confirmedRegs = 0;
+        $remainingPlaces = 0;
+        $pendingTestimonials = 0;
+        $publishedNews = 0;
+        try {
+            $totalEvents = (int)db()->query("SELECT COUNT(*) FROM events")->fetchColumn();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $confirmedRegs = (int)db()->query("SELECT COUNT(*) FROM event_registrations WHERE status='confirmed'")->fetchColumn();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $pendingTestimonials = (int)db()->query("SELECT COUNT(*) FROM testimonials WHERE COALESCE(status,'pending')='pending'")->fetchColumn();
+        } catch (\Throwable $e) {
+        }
+        try {
+            $publishedNews = (int)db()->query("SELECT COUNT(*) FROM news WHERE COALESCE(status,'published')='published'")->fetchColumn();
+        } catch (\Throwable $e) {
+        }
+        // Remaining places aggregate: sum over events with capacity of (capacity - non-cancelled registrations)
+        try {
+            $evtRows = db()->query("SELECT id, capacity FROM events WHERE capacity IS NOT NULL AND capacity > 0")->fetchAll();
+            foreach ($evtRows as $er) {
+                $cap = (int)$er['capacity'];
+                $usedStmt = db()->prepare("SELECT COUNT(*) FROM event_registrations WHERE event_id=? AND status!='cancelled'");
+                $usedStmt->execute([$er['id']]);
+                $used = (int)$usedStmt->fetchColumn();
+                $remainingPlaces += max($cap - $used, 0);
+            }
+        } catch (\Throwable $e) {
+        }
+        return view('admin/dashboard', compact('title', 'totalEvents', 'confirmedRegs', 'remainingPlaces', 'pendingTestimonials', 'publishedNews'));
     }
 
     // Events (Événements)
     public function eventsIndex(): string
     {
         $items = db()->query('SELECT * FROM events ORDER BY event_date DESC, id DESC')->fetchAll();
+        // Attach registration counts for quick overview
+        try {
+            $counts = db()->query('SELECT event_id, COUNT(*) AS c FROM event_registrations GROUP BY event_id')->fetchAll();
+            $map = [];
+            foreach ($counts as $r) {
+                $map[$r['event_id']] = $r['c'];
+            }
+            foreach ($items as &$it) {
+                $it['registrations_count'] = $map[$it['id']] ?? 0;
+            }
+            unset($it);
+        } catch (\Throwable $e) { /* ignore */
+        }
         $title = 'Admin – Événements';
         return view('admin/events/index', compact('title', 'items'));
     }
@@ -32,7 +79,7 @@ class AdminController
     public function eventsStore(): string
     {
         require_csrf();
-        $title = substr(trim($_POST['title'] ?? ''), 0, 191);
+        $title = trim($_POST['title'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $event_date = trim($_POST['event_date'] ?? '');
         $category = substr(trim($_POST['category'] ?? ''), 0, 191);
@@ -42,12 +89,10 @@ class AdminController
         $cta_url = substr(trim($_POST['cta_url'] ?? ''), 0, 255);
         $status = in_array($_POST['status'] ?? 'draft', ['draft', 'published']) ? $_POST['status'] : 'draft';
         $publish_at = trim($_POST['publish_at'] ?? '') ?: null;
-        // Checkbox: if not present, treat as 0
         $enabled = isset($_POST['enabled']) ? 1 : 0;
-        if ($title !== '' && $event_date !== '') {
-            $st = db()->prepare('INSERT INTO events(title, description, status, publish_at, event_date, category, language, program, location, cta_url, enabled) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
-            $st->execute([$title, $description, $status, $publish_at, $event_date, $category, $language, $program, $location, $cta_url, $enabled]);
-        }
+        $capacity = (int)($_POST['capacity'] ?? 0);
+        $st = db()->prepare('INSERT INTO events(title, description, status, publish_at, event_date, category, language, program, location, cta_url, enabled, capacity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
+        $st->execute([$title, $description, $status, $publish_at, $event_date, $category, $language, $program, $location, $cta_url, $enabled, $capacity]);
         header('Location: ' . base_url('/admin/events'));
         return '';
     }
@@ -55,7 +100,7 @@ class AdminController
     {
         require_csrf();
         $id = (int)($_POST['id'] ?? 0);
-        $title = substr(trim($_POST['title'] ?? ''), 0, 191);
+        $title = trim($_POST['title'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $event_date = trim($_POST['event_date'] ?? '');
         $category = substr(trim($_POST['category'] ?? ''), 0, 191);
@@ -65,13 +110,91 @@ class AdminController
         $cta_url = substr(trim($_POST['cta_url'] ?? ''), 0, 255);
         $status = in_array($_POST['status'] ?? 'draft', ['draft', 'published']) ? $_POST['status'] : 'draft';
         $publish_at = trim($_POST['publish_at'] ?? '') ?: null;
-        // Checkbox: if not present, treat as 0
         $enabled = isset($_POST['enabled']) ? 1 : 0;
+        $capacity = (int)($_POST['capacity'] ?? 0);
         if ($id) {
-            $st = db()->prepare('UPDATE events SET title=?, description=?, status=?, publish_at=?, event_date=?, category=?, language=?, program=?, location=?, cta_url=?, enabled=? WHERE id=?');
-            $st->execute([$title, $description, $status, $publish_at, $event_date, $category, $language, $program, $location, $cta_url, $enabled, $id]);
+            $st = db()->prepare('UPDATE events SET title=?, description=?, status=?, publish_at=?, event_date=?, category=?, language=?, program=?, location=?, cta_url=?, enabled=?, capacity=? WHERE id=?');
+            $st->execute([$title, $description, $status, $publish_at, $event_date, $category, $language, $program, $location, $cta_url, $enabled, $capacity, $id]);
         }
         header('Location: ' . base_url('/admin/events'));
+        return '';
+    }
+    public function eventRegistrationStatus(): string
+    {
+        $regId = (int)($_GET['reg_id'] ?? 0);
+        $status = $_GET['status'] ?? '';
+        if ($regId > 0 && in_array($status, ['confirmed', 'cancelled'])) {
+            $st = db()->prepare('UPDATE event_registrations SET status=? WHERE id=?');
+            $st->execute([$status, $regId]);
+            // Notify admin on confirmation
+            if ($status === 'confirmed') {
+                try {
+                    $rowSt = db()->prepare('SELECT er.*, e.title FROM event_registrations er JOIN events e ON e.id=er.event_id WHERE er.id=?');
+                    $rowSt->execute([$regId]);
+                    $r = $rowSt->fetch();
+                    $adminEmail = (function () {
+                        $cfg = config();
+                        return $cfg['admin_email'] ?? '';
+                    })();
+                    if ($adminEmail && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+                        $subject = 'Inscription confirmée – ' . ($r['title'] ?? 'Événement');
+                        $body = "Événement: " . ($r['title'] ?? '') . "\nNom: " . ($r['name'] ?? '') . "\nEmail: " . ($r['email'] ?? '') . "\nTéléphone: " . ($r['phone'] ?? '') . "\nMessage:\n" . ($r['message'] ?? '');
+                        @mail($adminEmail, $subject, $body);
+                    }
+                } catch (\Throwable $e) { /* ignore */
+                }
+            }
+        }
+        $back = $_SERVER['HTTP_REFERER'] ?? base_url('admin/events/registrations');
+        header('Location: ' . $back);
+        return '';
+    }
+    public function eventRegistrationCreateForm(): string
+    {
+        $events = [];
+        try {
+            $events = db()->query("SELECT id,title,event_date FROM events ORDER BY event_date DESC LIMIT 200")->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        $title = 'Ajouter une inscription';
+        return view('admin/events/registration_create', compact('title', 'events'));
+    }
+    public function eventRegistrationStore(): string
+    {
+        require_csrf();
+        $event_id = (int)($_POST['event_id'] ?? 0);
+        $name = substr(trim($_POST['name'] ?? ''), 0, 190);
+        $email = substr(trim($_POST['email'] ?? ''), 0, 190);
+        $phone = substr(trim($_POST['phone'] ?? ''), 0, 60);
+        $message = trim($_POST['message'] ?? '');
+        $status = in_array($_POST['status'] ?? 'pending', ['pending', 'confirmed', 'cancelled']) ? $_POST['status'] : 'pending';
+        $consent = isset($_POST['consent']) ? 1 : 0;
+        // Basic validation
+        $evtStmt = db()->prepare('SELECT id,title,capacity FROM events WHERE id=?');
+        $evtStmt->execute([$event_id]);
+        $evt = $evtStmt->fetch();
+        if (!$evt || $name === '') {
+            $error = 'Événement invalide ou nom requis.';
+            $events = db()->query("SELECT id,title,event_date FROM events ORDER BY event_date DESC LIMIT 200")->fetchAll();
+            $title = 'Ajouter une inscription';
+            return view('admin/events/registration_create', compact('title', 'events', 'error'));
+        }
+        // Capacity check if confirming directly
+        if ($evt['capacity'] !== null && $evt['capacity'] !== '' && $status !== 'cancelled') {
+            $cap = (int)$evt['capacity'];
+            $usedStmt = db()->prepare("SELECT COUNT(*) FROM event_registrations WHERE event_id=? AND status!='cancelled'");
+            $usedStmt->execute([$evt['id']]);
+            $used = (int)$usedStmt->fetchColumn();
+            if ($used >= $cap) {
+                $error = 'Capacité atteinte pour cet événement.';
+                $events = db()->query("SELECT id,title,event_date FROM events ORDER BY event_date DESC LIMIT 200")->fetchAll();
+                $title = 'Ajouter une inscription';
+                return view('admin/events/registration_create', compact('title', 'events', 'error'));
+            }
+        }
+        $ins = db()->prepare('INSERT INTO event_registrations(event_id,name,email,phone,message,status,consent) VALUES(?,?,?,?,?,?,?)');
+        $ins->execute([$evt['id'], $name, $email, $phone, $message, $status, $consent]);
+        header('Location: ' . base_url('admin/events/registrations?event_id=' . $evt['id']));
         return '';
     }
     public function eventsDelete(): string
@@ -93,6 +216,96 @@ class AdminController
             $st->execute([$id]);
         }
         header('Location: ' . base_url('/admin/events'));
+        return '';
+    }
+
+    // Event registrations listing with optional date filters
+    public function eventRegistrationsIndex(): string
+    {
+        $eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+        $start = trim($_GET['start'] ?? '');
+        $end = trim($_GET['end'] ?? '');
+        $event = null;
+        $items = [];
+        if ($eventId > 0) {
+            $st = db()->prepare('SELECT * FROM events WHERE id=?');
+            $st->execute([$eventId]);
+            $event = $st->fetch();
+            if ($event) {
+                $sql = 'SELECT * FROM event_registrations WHERE event_id=?';
+                $params = [$eventId];
+                if ($start !== '') {
+                    $sql .= ' AND DATE(created_at) >= ?';
+                    $params[] = $start;
+                }
+                if ($end !== '') {
+                    $sql .= ' AND DATE(created_at) <= ?';
+                    $params[] = $end;
+                }
+                $sql .= ' ORDER BY created_at DESC';
+                $st2 = db()->prepare($sql);
+                $st2->execute($params);
+                $items = $st2->fetchAll();
+            }
+        } else {
+            $sql = 'SELECT er.*, e.title FROM event_registrations er JOIN events e ON e.id=er.event_id WHERE 1';
+            $params = [];
+            if ($start !== '') {
+                $sql .= ' AND DATE(er.created_at) >= ?';
+                $params[] = $start;
+            }
+            if ($end !== '') {
+                $sql .= ' AND DATE(er.created_at) <= ?';
+                $params[] = $end;
+            }
+            $sql .= ' ORDER BY er.created_at DESC';
+            $st = db()->prepare($sql);
+            $st->execute($params);
+            $items = $st->fetchAll();
+        }
+        $title = 'Admin – Inscriptions Événements';
+        return view('admin/events/registrations', compact('title', 'items', 'event', 'start', 'end'));
+    }
+
+    public function eventRegistrationsExport(): string
+    {
+        $eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+        $rows = [];
+        if ($eventId > 0) {
+            $st = db()->prepare('SELECT er.*, e.title FROM event_registrations er JOIN events e ON e.id=er.event_id WHERE event_id=? ORDER BY er.created_at DESC');
+            $st->execute([$eventId]);
+            $status = trim($_GET['status'] ?? '');
+            $rows = $st->fetchAll();
+        } else {
+            $rows = db()->query('SELECT er.*, e.title FROM event_registrations er JOIN events e ON e.id=er.event_id ORDER BY er.created_at DESC')->fetchAll();
+        }
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="inscriptions_evenements.csv"');
+        $out = fopen('php://output', 'w');
+        $sql = 'SELECT * FROM event_registrations WHERE event_id=?';
+        fputcsv($out, ['Événement', 'Nom', 'Email', 'Téléphone', 'Message', 'Statut', 'Consentement', 'Date']);
+        foreach ($rows as $r) {
+            $consent = ((int)($r['consent'] ?? 0) === 1) ? 'Oui' : 'Non';
+            if ($status !== '' && in_array($status, ['pending', 'confirmed', 'cancelled'])) {
+                $sql .= ' AND status=?';
+                $params[] = $status;
+            }
+            fputcsv($out, [
+                $r['title'] ?? '',
+                $r['name'],
+                $r['email'],
+                $r['phone'],
+                $r['message'],
+                $r['status'] ?? 'pending',
+                $consent,
+                $r['created_at']
+            ]);
+            if ($status !== '' && in_array($status, ['pending', 'confirmed', 'cancelled'])) {
+                $sql .= ' AND er.status=?';
+                $params[] = $status;
+            }
+        }
+        fclose($out);
         return '';
     }
 
@@ -1093,6 +1306,54 @@ class AdminController
         // Try webp conversion for jpg/png
         $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $location, 'uploads/editor');
         echo json_encode(['location' => $location]);
+        return '';
+    }
+    // Settings
+    public function settingsForm(): string
+    {
+        $title = 'Paramètres du site';
+        $row = db()->query('SELECT * FROM settings WHERE id=1')->fetch();
+        return view('admin/settings/form', compact('title', 'row'));
+    }
+    public function settingsSave(): string
+    {
+        require_csrf();
+        $logo_url = trim($_POST['logo_url'] ?? '');
+        if (!empty($_FILES['logo_file']['name'])) {
+            $upl = $_FILES['logo_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/site';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('logo_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $logo_url = base_url('uploads/site/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $logo_url, 'uploads/site');
+                    }
+                }
+            }
+        }
+        $contact_email = substr(trim($_POST['contact_email'] ?? ''), 0, 200);
+        $contact_phone = substr(trim($_POST['contact_phone'] ?? ''), 0, 60);
+        $contact_address = substr(trim($_POST['contact_address'] ?? ''), 0, 300);
+        $link_programmes = substr(trim($_POST['link_programmes'] ?? ''), 0, 300);
+        $link_formations = substr(trim($_POST['link_formations'] ?? ''), 0, 300);
+        $link_actualites = substr(trim($_POST['link_actualites'] ?? ''), 0, 300);
+        $link_partenaires = substr(trim($_POST['link_partenaires'] ?? ''), 0, 300);
+        $social_facebook = substr(trim($_POST['social_facebook'] ?? ''), 0, 300);
+        $social_linkedin = substr(trim($_POST['social_linkedin'] ?? ''), 0, 300);
+        $social_youtube = substr(trim($_POST['social_youtube'] ?? ''), 0, 300);
+        $newsletter_text = substr(trim($_POST['newsletter_text'] ?? ''), 0, 500);
+        $newsletter_url = substr(trim($_POST['newsletter_url'] ?? ''), 0, 300);
+        $platform_url = substr(trim($_POST['platform_url'] ?? ''), 0, 300);
+
+        $st = db()->prepare('UPDATE settings SET logo_url=?, contact_email=?, contact_phone=?, contact_address=?, link_programmes=?, link_formations=?, link_actualites=?, link_partenaires=?, social_facebook=?, social_linkedin=?, social_youtube=?, newsletter_text=?, newsletter_url=?, platform_url=?, updated_at=NOW() WHERE id=1');
+        $st->execute([$logo_url, $contact_email, $contact_phone, $contact_address, $link_programmes, $link_formations, $link_actualites, $link_partenaires, $social_facebook, $social_linkedin, $social_youtube, $newsletter_text, $newsletter_url, $platform_url]);
+        header('Location: ' . base_url('/admin/settings'));
         return '';
     }
     public function contactsExportCsv(): string

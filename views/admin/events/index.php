@@ -36,6 +36,26 @@
                 <div class="card-body">
                     <div class="card-title"><?= htmlspecialchars($it['title']) ?></div>
                     <div class="card-description"><?= htmlspecialchars(mb_strimwidth($it['description'] ?? '', 0, 120, '…')) ?></div>
+                    <div style="margin:.4rem 0 .2rem; font-size:.75rem; color:#0b3b8f; font-weight:600;">
+                        Inscriptions: <?= (int)($it['registrations_count'] ?? 0) ?>
+                        <?php if (($it['registrations_count'] ?? 0) > 0): ?>
+                            • <a href="<?= base_url('admin/events/registrations?event_id=' . (int)$it['id']) ?>" style="text-decoration:none;color:#2563eb;">Voir</a>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (isset($it['capacity']) && (int)$it['capacity'] > 0): ?>
+                        <?php $cap = (int)$it['capacity'];
+                        $used = (int)($it['registrations_count'] ?? 0);
+                        $pct = max(0, min(100, (int)round(($used / max($cap, 1)) * 100))); ?>
+                        <div style="margin:.35rem 0 .5rem;">
+                            <div style="display:flex;justify-content:space-between;font-size:.7rem;color:#94a3b8;margin-bottom:.25rem;">
+                                <span>Occupation</span>
+                                <span><?= $used ?>/<?= $cap ?> (<?= $pct ?>%)</span>
+                            </div>
+                            <div style="height:8px;background:#0b3b8f20;border:1px solid #0b3b8f30;border-radius:999px;overflow:hidden;">
+                                <div style="width:<?= $pct ?>%;height:100%;background:<?= ($pct >= 100 ? '#ef4444' : ($pct >= 75 ? '#f59e0b' : '#22c55e')) ?>;"></div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     <div class="meta">
                         <span><i class="fa-regular fa-calendar"></i> <?= $ts ? date('d/m/Y', $ts) : '' ?></span>
                         <?php if (!empty($it['language'])): ?><span><i class="fa-solid fa-globe"></i> <?= htmlspecialchars($it['language']) ?></span><?php endif; ?>

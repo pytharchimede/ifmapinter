@@ -39,6 +39,16 @@
             </div>
             <div class="grid-2">
                 <div class="form-group">
+                    <label>Capacité (places)</label>
+                    <input class="form-control" type="number" min="1" name="capacity" value="<?= htmlspecialchars($item['capacity'] ?? '') ?>" placeholder="Illimité si vide">
+                </div>
+                <div class="form-group">
+                    <label>URL d'inscription externe</label>
+                    <input class="form-control" type="url" name="cta_url" value="<?= htmlspecialchars($item['cta_url'] ?? '') ?>" placeholder="https://...">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
                     <label>Programme</label>
                     <input class="form-control" type="text" name="program" value="<?= htmlspecialchars($item['program'] ?? '') ?>">
                 </div>
@@ -47,15 +57,9 @@
                     <input class="form-control" type="text" name="language" value="<?= htmlspecialchars($item['language'] ?? '') ?>">
                 </div>
             </div>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>Catégorie</label>
-                    <input class="form-control" type="text" name="category" value="<?= htmlspecialchars($item['category'] ?? '') ?>">
-                </div>
-                <div class="form-group">
-                    <label>URL d'inscription (CTA)</label>
-                    <input class="form-control" type="url" name="cta_url" value="<?= htmlspecialchars($item['cta_url'] ?? '') ?>">
-                </div>
+            <div class="form-group">
+                <label>Catégorie</label>
+                <input class="form-control" type="text" name="category" value="<?= htmlspecialchars($item['category'] ?? '') ?>">
             </div>
         </div>
 

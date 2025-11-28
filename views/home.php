@@ -594,8 +594,13 @@
                             </div>
                             <p><?= htmlspecialchars(mb_strimwidth($e['description'] ?? '', 0, 120, '…')) ?></p>
                             <div class="event-actions">
-                                <?php if (!empty($e['cta_url'])): ?>
-                                    <a class="btn-outline" href="<?= htmlspecialchars($e['cta_url']) ?>" target="_blank" rel="noopener">Inscription</a>
+                                <?php
+                                $cta = trim($e['cta_url'] ?? '');
+                                $isExternal = preg_match('~^https?://~i', $cta);
+                                if ($cta !== '' && $isExternal): ?>
+                                    <a class="btn-outline" href="<?= htmlspecialchars($cta) ?>" target="_blank" rel="noopener">Inscription</a>
+                                <?php else: ?>
+                                    <a class="btn-outline" href="<?= base_url('evenements/inscription?id=' . (int)$e['id']) ?>">Inscription</a>
                                 <?php endif; ?>
                                 <?php
                                 $title = $e['title'] ?? 'Événement IFMAP';
