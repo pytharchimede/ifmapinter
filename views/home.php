@@ -5,6 +5,11 @@
     <div class="hero-overlay"></div>
     <div class="hero-carousel" id="hero-carousel">
         <div class="hero-track">
+            <?php $settings = null;
+            try {
+                $settings = db()->query('SELECT logo_url FROM settings WHERE id=1')->fetch();
+            } catch (Throwable $e) {
+            } ?>
             <?php
             $carousels = [];
             try {
@@ -21,6 +26,11 @@
                     ?>
                     <div class="hero-slide <?= $hasBg ? '' : $bgClass ?>" <?= $hasBg ? "style=\"--bg-image:url('" . htmlspecialchars($c['background_url']) . "')\"" : '' ?>>
                         <div class="hero-content">
+                            <?php if (!empty($settings['logo_url'])): ?>
+                                <div style="margin-bottom:12px;">
+                                    <img src="<?= htmlspecialchars($settings['logo_url']) ?>" alt="IFMAP" style="max-height:56px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.25));" />
+                                </div>
+                            <?php endif; ?>
                             <?php if (!empty($c['title'])): ?><h1 data-anim="fade"><?= htmlspecialchars($c['title']) ?></h1><?php endif; ?>
                             <?php if (!empty($c['description'])): ?><p data-anim="fade-delayed"><?= htmlspecialchars($c['description']) ?></p><?php endif; ?>
                             <?php

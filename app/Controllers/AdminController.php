@@ -1356,6 +1356,45 @@ class AdminController
         header('Location: ' . base_url('/admin/settings'));
         return '';
     }
+
+    // Newsletter admin listing
+    public function newsletterIndex(): string
+    {
+        $title = 'Newsletter – Inscriptions';
+        $rows = [];
+        try {
+            $rows = db()->query('SELECT * FROM newsletter_subscriptions ORDER BY created_at DESC')->fetchAll();
+        } catch (\Throwable $e) {
+            try {
+                db()->exec(
+                    "CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        email VARCHAR(200) NOT NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY uniq_email (email)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                );
+                $rows = db()->query('SELECT * FROM newsletter_subscriptions ORDER BY created_at DESC')->fetchAll();
+            } catch (\Throwable $e2) {
+                $rows = [];
+            }
+        }
+        return view('admin/newsletter/index', compact('title', 'rows'));
+    }
+    public function newsletterExportCsv(): string
+    {
+        $rows = db()->query('SELECT email, created_at FROM newsletter_subscriptions ORDER BY created_at DESC')->fetchAll();
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="newsletter_inscriptions.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Email', 'Date']);
+        foreach ($rows as $r) {
+            fputcsv($out, [$r['email'], $r['created_at']]);
+        }
+        fclose($out);
+        return '';
+    }
     public function contactsExportCsv(): string
     {
         // Filters: start, end (YYYY-MM-DD), q (search)

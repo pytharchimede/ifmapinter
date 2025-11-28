@@ -842,6 +842,10 @@ $router->post('/newsletter/subscribe', function () {
   return '';
 });
 
+// Admin: Newsletter listing & export
+$router->get('/admin/newsletter', fn() => require_auth(fn() => (new AdminController())->newsletterIndex()));
+$router->get('/admin/newsletter/export.csv', fn() => require_auth(fn() => (new AdminController())->newsletterExportCsv()));
+
 // Admin Formations section params save
 $router->post('/admin/formations/section/save', fn() => require_auth(fn() => (new AdminController())->formationsSectionSave()));
 

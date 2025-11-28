@@ -29,6 +29,9 @@
                 <span class="nav-label">Actualités</span>
                 <a href="<?= base_url('admin/news') ?>">Actualités (articles)</a>
                 <a href="<?= base_url('admin/rss-sources') ?>">Flux RSS / APIs</a>
+                <span class="nav-label">Paramètres</span>
+                <a href="<?= base_url('admin/settings') ?>">IFMAP – Logo & Infos</a>
+                <a href="<?= base_url('admin/newsletter') ?>">Newsletter – Inscriptions</a>
             </nav>
         </aside>
         <main class="admin-main">
