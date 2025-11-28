@@ -170,8 +170,12 @@ class AdminController
     public function formationsIndex(): string
     {
         $items = db()->query('SELECT * FROM formations ORDER BY id DESC')->fetchAll();
+        // Load section params
+        $st = db()->prepare('SELECT title, subtitle FROM sections WHERE `key`=?');
+        $st->execute(['formations']);
+        $section = $st->fetch() ?: ['title' => 'Formations IFMAP', 'subtitle' => 'Des formations professionnalisantes adaptées au marché africain.'];
         $title = 'Admin – Formations';
-        return view('admin/formations/index', compact('title', 'items'));
+        return view('admin/formations/index', compact('title', 'items', 'section'));
     }
     public function formationsForm(): string
     {
@@ -188,11 +192,30 @@ class AdminController
     public function formationsStore(): string
     {
         require_csrf();
-        $st = db()->prepare('INSERT INTO formations(name, image_url) VALUES(?,?)');
-        $st->execute([
-            trim($_POST['name'] ?? ''),
-            trim($_POST['image_url'] ?? ''),
-        ]);
+        $name = substr(trim($_POST['name'] ?? ''), 0, 160);
+        $description = substr(trim($_POST['description'] ?? ''), 0, 300);
+        $status = in_array($_POST['status'] ?? 'published', ['draft', 'published']) ? $_POST['status'] : 'published';
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/formations';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('f_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/formations/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/formations');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO formations(name, description, status, image_url) VALUES(?,?,?,?)');
+        $st->execute([$name, $description, $status, $image_url]);
         header('Location: ' . base_url('/admin/formations'));
         return '';
     }
@@ -200,12 +223,30 @@ class AdminController
     {
         require_csrf();
         $id = (int)($_POST['id'] ?? 0);
-        $st = db()->prepare('UPDATE formations SET name=?, image_url=? WHERE id=?');
-        $st->execute([
-            trim($_POST['name'] ?? ''),
-            trim($_POST['image_url'] ?? ''),
-            $id
-        ]);
+        $name = substr(trim($_POST['name'] ?? ''), 0, 160);
+        $description = substr(trim($_POST['description'] ?? ''), 0, 300);
+        $status = in_array($_POST['status'] ?? 'published', ['draft', 'published']) ? $_POST['status'] : 'published';
+        $image_url = trim($_POST['image_url'] ?? '');
+        if (!empty($_FILES['image_file']['name'])) {
+            $upl = $_FILES['image_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/formations';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('f_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $image_url = base_url('uploads/formations/' . $fname);
+                        $this->convertToWebpIfPossibleGeneric($dest, $ext, $baseDir, $image_url, 'uploads/formations');
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE formations SET name=?, description=?, status=?, image_url=? WHERE id=?');
+        $st->execute([$name, $description, $status, $image_url, $id]);
         header('Location: ' . base_url('/admin/formations'));
         return '';
     }
@@ -215,6 +256,26 @@ class AdminController
         if ($id) {
             $st = db()->prepare('DELETE FROM formations WHERE id=?');
             $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/formations'));
+        return '';
+    }
+
+    // Save formations section params
+    public function formationsSectionSave(): string
+    {
+        require_csrf();
+        $title = trim($_POST['title'] ?? '') ?: null;
+        $subtitle = trim($_POST['subtitle'] ?? '') ?: null;
+        // Upsert into sections
+        $exists = db()->prepare('SELECT COUNT(*) FROM sections WHERE `key`=?');
+        $exists->execute(['formations']);
+        if ((int)$exists->fetchColumn() > 0) {
+            $upd = db()->prepare('UPDATE sections SET title=?, subtitle=?, updated_at=NOW() WHERE `key`=?');
+            $upd->execute([$title, $subtitle, 'formations']);
+        } else {
+            $ins = db()->prepare('INSERT INTO sections(`key`, title, subtitle, updated_at) VALUES(?,?,?,NOW())');
+            $ins->execute(['formations', $title, $subtitle]);
         }
         header('Location: ' . base_url('/admin/formations'));
         return '';

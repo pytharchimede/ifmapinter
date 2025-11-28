@@ -65,6 +65,86 @@ try {
 } catch (Throwable $e) {
   // ignore programmes migration errors
 }
+// Ensure 'formations' table has required columns and seed initial items
+try {
+  $formTable = db()->query("SHOW TABLES LIKE 'formations'")->fetchColumn();
+  if ($formTable) {
+    $cols = db()->query("SHOW COLUMNS FROM formations")->fetchAll(PDO::FETCH_COLUMN);
+    $addF = function ($sql) {
+      db()->exec($sql);
+    };
+    if (!in_array('description', $cols)) $addF("ALTER TABLE formations ADD COLUMN description VARCHAR(500) NULL AFTER name");
+    if (!in_array('status', $cols)) $addF("ALTER TABLE formations ADD COLUMN status VARCHAR(20) NULL DEFAULT 'published' AFTER description");
+    // Seed from programmes or carousels if empty
+    $fcount = (int)db()->query('SELECT COUNT(*) FROM formations')->fetchColumn();
+    if ($fcount === 0) {
+      // Prefer seed from programmes if available, else carousels
+      $progExists = db()->query("SHOW TABLES LIKE 'programmes'")->fetchColumn();
+      $seedRows = [];
+      if ($progExists) {
+        $seedRows = db()->query('SELECT name, excerpt AS description, image_url FROM programmes ORDER BY id DESC')->fetchAll();
+      }
+      if (empty($seedRows)) {
+        $carExists = db()->query("SHOW TABLES LIKE 'carousels'")->fetchColumn();
+        if ($carExists) {
+          $seedRows = db()->query('SELECT title AS name, caption AS description, background_url AS image_url FROM carousels ORDER BY position ASC')->fetchAll();
+        }
+      }
+      if (!empty($seedRows)) {
+        $insF = db()->prepare('INSERT INTO formations(name, description, status, image_url) VALUES(?,?,?,?)');
+        foreach ($seedRows as $r) {
+          $name = $r['name'] ?? 'Formation';
+          $desc = $r['description'] ?? '';
+          $img = $r['image_url'] ?? '';
+          $insF->execute([$name, $desc, 'published', $img]);
+        }
+      }
+    }
+  }
+} catch (Throwable $e) {
+  // ignore formations migration/seed errors
+}
+
+// Seed specific requested formations if missing
+try {
+  $requiredFormations = [
+    ['name' => 'Pompiste / Station-service', 'description' => '', 'status' => 'published'],
+    ['name' => 'Caissière & Rayonniste', 'description' => '', 'status' => 'published'],
+    ['name' => 'Technicien Solaire', 'description' => '', 'status' => 'published'],
+    ['name' => 'Transport & Logistique', 'description' => '', 'status' => 'published'],
+  ];
+  $existsTable = db()->query("SHOW TABLES LIKE 'formations'")->fetchColumn();
+  if ($existsTable) {
+    $sel = db()->prepare('SELECT COUNT(*) FROM formations WHERE name = ?');
+    $ins = db()->prepare('INSERT INTO formations(name, description, status, image_url) VALUES(?,?,?,?)');
+    foreach ($requiredFormations as $f) {
+      $sel->execute([$f['name']]);
+      $count = (int)$sel->fetchColumn();
+      if ($count === 0) {
+        $ins->execute([$f['name'], $f['description'], $f['status'], '']);
+      }
+    }
+  }
+} catch (Throwable $e) {
+  // ignore manual seed errors
+}
+
+// Ensure 'sections' table exists (for dynamic section headers)
+try {
+  $secTable = db()->query("SHOW TABLES LIKE 'sections'")->fetchColumn();
+  if (!$secTable) {
+    db()->exec(
+      "CREATE TABLE sections (
+        `key` VARCHAR(50) PRIMARY KEY,
+        title VARCHAR(200) NULL,
+        subtitle VARCHAR(500) NULL,
+        updated_at DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  }
+} catch (Throwable $e) {
+  // ignore sections migration errors
+}
 
 // Seed initial programmes from existing carousels if empty
 try {
@@ -161,8 +241,19 @@ $router->get('/programmes', fn() => view('public/programmes', [
   'items' => db()->query('SELECT * FROM programmes ORDER BY id DESC')->fetchAll()
 ]));
 $router->get('/formations', fn() => view('public/formations', [
-  'title' => 'Formations',
-  'items' => db()->query('SELECT * FROM formations ORDER BY id DESC')->fetchAll()
+  'title' => (function () {
+    $st = db()->prepare('SELECT title FROM sections WHERE `key`=?');
+    $st->execute(['formations']);
+    $t = $st->fetchColumn();
+    return $t ?: 'Formations IFMAP';
+  })(),
+  'subtitle' => (function () {
+    $st = db()->prepare('SELECT subtitle FROM sections WHERE `key`=?');
+    $st->execute(['formations']);
+    $t = $st->fetchColumn();
+    return $t ?: 'Des formations professionnalisantes adaptées au marché africain.';
+  })(),
+  'items' => db()->query("SELECT * FROM formations WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll()
 ]));
 $router->get('/partenaires', fn() => view('public/partners', [
   'title' => 'Partenaires',
@@ -244,6 +335,9 @@ $router->post('/admin/carousels/order', fn() => require_auth(fn() => (new AdminC
 
 // TinyMCE upload endpoint
 $router->post('/admin/upload', fn() => require_auth(fn() => (new AdminController())->adminUpload()));
+
+// Admin Formations section params save
+$router->post('/admin/formations/section/save', fn() => require_auth(fn() => (new AdminController())->formationsSectionSave()));
 
 // Alumni: modèle de CV téléchargeable (HTML simple pour l'instant)
 $router->get('/alumni/cv-template', fn() => view('public/alumni_cv', [
