@@ -408,6 +408,24 @@ try {
 } catch (Throwable $e) { /* ignore visits migration */
 }
 
+// Translations table (multilingue)
+try {
+  $trTable = db()->query("SHOW TABLES LIKE 'translations'")->fetchColumn();
+  if (!$trTable) {
+    db()->exec(
+      "CREATE TABLE translations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        lang VARCHAR(10) NOT NULL,
+        `key` VARCHAR(200) NOT NULL,
+        `value` TEXT NOT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_lang_key (lang, `key`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  }
+} catch (Throwable $e) { /* ignore translations migration */
+}
+
 // Enregistrer la visite courante (avant instanciation Router pour simplicité)
 try {
   $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -571,6 +589,17 @@ $router->post('/temoignages/soumettre', fn() => (new HomeController())->submitTe
 $router->get('/login', fn() => (new AuthController())->loginForm());
 $router->post('/login', fn() => (new AuthController())->login());
 $router->get('/logout', fn() => (new AuthController())->logout());
+
+// Switch language (sets cookie and redirects)
+$router->get('/lang', function () {
+  $l = trim($_GET['l'] ?? $_GET['lang'] ?? '');
+  if ($l !== '' && preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $l)) {
+    set_lang_cookie($l);
+  }
+  $back = $_GET['back'] ?? '/';
+  header('Location: ' . base_url($back));
+  return '';
+});
 
 // Admin (protégé)
 $router->get('/admin', fn() => require_auth(fn() => (new AdminController())->dashboard()));

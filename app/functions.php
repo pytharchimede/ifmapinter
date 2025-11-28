@@ -105,3 +105,70 @@ function require_csrf(): void
         exit;
     }
 }
+
+// ================= i18n ================= //
+function resolve_lang(): string
+{
+    // 1) query param ?lang=xx
+    if (isset($_GET['lang']) && preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $_GET['lang'])) {
+        return $_GET['lang'];
+    }
+    // 2) cookie
+    if (!empty($_COOKIE['lang']) && preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $_COOKIE['lang'])) {
+        return $_COOKIE['lang'];
+    }
+    // 3) Accept-Language
+    $al = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
+    if ($al) {
+        $code = substr($al, 0, 2);
+        if (preg_match('/^[a-z]{2}$/', $code)) return $code;
+    }
+    // 4) fallback config
+    $def = config()['app']['default_lang'] ?? 'fr';
+    return $def;
+}
+
+function t(string $key, ?string $lang = null): string
+{
+    static $cache = [];
+    $lang = $lang ?: resolve_lang();
+    if (!isset($cache[$lang])) {
+        try {
+            $st = db()->prepare('SELECT `key`, `value` FROM translations WHERE lang=?');
+            $st->execute([$lang]);
+            $rows = $st->fetchAll();
+            $cache[$lang] = [];
+            foreach ($rows as $r) {
+                $cache[$lang][$r['key']] = $r['value'];
+            }
+        } catch (Throwable $e) {
+            $cache[$lang] = [];
+        }
+    }
+    if (isset($cache[$lang][$key])) return (string)$cache[$lang][$key];
+    // fallback: try default lang, else return key
+    $def = config()['app']['default_lang'] ?? 'fr';
+    if ($def !== $lang) {
+        if (!isset($cache[$def])) {
+            try {
+                $st = db()->prepare('SELECT `key`, `value` FROM translations WHERE lang=?');
+                $st->execute([$def]);
+                $rows = $st->fetchAll();
+                $cache[$def] = [];
+                foreach ($rows as $r) {
+                    $cache[$def][$r['key']] = $r['value'];
+                }
+            } catch (Throwable $e) {
+                $cache[$def] = [];
+            }
+        }
+        if (isset($cache[$def][$key])) return (string)$cache[$def][$key];
+    }
+    return $key;
+}
+
+function set_lang_cookie(string $lang): void
+{
+    if (!preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $lang)) return;
+    setcookie('lang', $lang, time() + 365 * 24 * 3600, '/');
+}
