@@ -198,6 +198,28 @@ class Database
             }
         }
 
+        // Patch: add publication fields to events (status, publish_at, enabled)
+        try {
+            $existsStmt = $pdo->prepare('SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+            // status
+            $existsStmt->execute(['events', 'status']);
+            if (!$existsStmt->fetchColumn()) {
+                $pdo->exec("ALTER TABLE events ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'draft' AFTER description");
+            }
+            // publish_at
+            $existsStmt->execute(['events', 'publish_at']);
+            if (!$existsStmt->fetchColumn()) {
+                $pdo->exec("ALTER TABLE events ADD COLUMN publish_at DATETIME NULL AFTER status");
+            }
+            // enabled
+            $existsStmt->execute(['events', 'enabled']);
+            if (!$existsStmt->fetchColumn()) {
+                $pdo->exec("ALTER TABLE events ADD COLUMN enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER cta_url");
+            }
+        } catch (\PDOException $e) {
+            // ignore
+        }
+
         // Patch: ajouter colonne `read` (lu) sur contact_messages si manquante
         try {
             $existsStmt = $pdo->prepare('SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');

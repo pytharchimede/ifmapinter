@@ -343,6 +343,62 @@ $router->get('/temoignages', fn() => view('public/testimonials', [
   'title' => 'Témoignages',
   'rows' => db()->query("SELECT * FROM testimonials WHERE COALESCE(status,'pending')='approved' ORDER BY id DESC")->fetchAll()
 ]));
+$router->get('/evenements/ics', function () {
+  $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+  if ($id <= 0) {
+    http_response_code(400);
+    echo 'Invalid event id';
+    return '';
+  }
+  $st = db()->prepare('SELECT * FROM events WHERE id = ?');
+  $st->execute([$id]);
+  $e = $st->fetch();
+  if (!$e) {
+    http_response_code(404);
+    echo 'Event not found';
+    return '';
+  }
+
+  $title = $e['title'] ?? 'Événement IFMAP';
+  $desc = trim(($e['description'] ?? ''));
+  $loc  = trim(($e['location'] ?? 'IFMAP'));
+  $date = strtotime($e['event_date']);
+  if (!$date) $date = time();
+
+  // Événement journée entière : DTSTART/DTEND en format DATE
+  $dtStart = gmdate('Ymd', $date);
+  $dtEnd   = gmdate('Ymd', strtotime('+1 day', $date));
+  $dtStamp = gmdate('Ymd\THis\Z');
+  $uidHost = parse_url(base_url('/'), PHP_URL_HOST) ?: 'ifmap.ci';
+  $uid = 'ifmap-' . $id . '@' . $uidHost;
+
+  $lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//IFMAP//Events//FR',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'DTSTAMP:' . $dtStamp,
+    'UID:' . $uid,
+    'SUMMARY:' . str_replace(["\n", "\r"], ' ', $title),
+    'DTSTART;VALUE=DATE:' . $dtStart,
+    'DTEND;VALUE=DATE:' . $dtEnd,
+    'DESCRIPTION:' . str_replace(["\n", "\r"], ' ', $desc),
+    'LOCATION:' . str_replace(["\n", "\r"], ' ', $loc),
+  ];
+  if (!empty($e['cta_url'])) {
+    $lines[] = 'URL:' . $e['cta_url'];
+  }
+  $lines[] = 'END:VEVENT';
+  $lines[] = 'END:VCALENDAR';
+  $ics = implode("\r\n", $lines) . "\r\n";
+
+  header('Content-Type: text/calendar; charset=utf-8');
+  header('Content-Disposition: attachment; filename="event-' . $id . '.ics"');
+  echo $ics;
+  return '';
+});
 $router->post('/temoignages/soumettre', fn() => (new HomeController())->submitTestimonial());
 
 // Auth
@@ -352,6 +408,13 @@ $router->get('/logout', fn() => (new AuthController())->logout());
 
 // Admin (protégé)
 $router->get('/admin', fn() => require_auth(fn() => (new AdminController())->dashboard()));
+$router->get('/admin/events', fn() => require_auth(fn() => (new AdminController())->eventsIndex()));
+$router->get('/admin/events/create', fn() => require_auth(fn() => (new AdminController())->eventsForm()));
+$router->post('/admin/events/create', fn() => require_auth(fn() => (new AdminController())->eventsStore()));
+$router->get('/admin/events/edit', fn() => require_auth(fn() => (new AdminController())->eventsForm()));
+$router->post('/admin/events/edit', fn() => require_auth(fn() => (new AdminController())->eventsUpdate()));
+$router->get('/admin/events/delete', fn() => require_auth(fn() => (new AdminController())->eventsDelete()));
+$router->get('/admin/events/toggle', fn() => require_auth(fn() => (new AdminController())->eventsToggle()));
 $router->get('/admin/news', fn() => require_auth(fn() => (new AdminController())->newsIndex()));
 $router->get('/admin/news/create', fn() => require_auth(fn() => (new AdminController())->newsForm()));
 $router->post('/admin/news/create', fn() => require_auth(fn() => (new AdminController())->newsStore()));

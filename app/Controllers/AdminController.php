@@ -10,6 +10,92 @@ class AdminController
         return view('admin/dashboard', compact('title'));
     }
 
+    // Events (Événements)
+    public function eventsIndex(): string
+    {
+        $items = db()->query('SELECT * FROM events ORDER BY event_date DESC, id DESC')->fetchAll();
+        $title = 'Admin – Événements';
+        return view('admin/events/index', compact('title', 'items'));
+    }
+    public function eventsForm(): string
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $item = null;
+        if ($id) {
+            $st = db()->prepare('SELECT * FROM events WHERE id=?');
+            $st->execute([$id]);
+            $item = $st->fetch();
+        }
+        $title = $id ? 'Modifier Événement' : 'Créer Événement';
+        return view('admin/events/form', compact('title', 'item'));
+    }
+    public function eventsStore(): string
+    {
+        require_csrf();
+        $title = substr(trim($_POST['title'] ?? ''), 0, 191);
+        $description = trim($_POST['description'] ?? '');
+        $event_date = trim($_POST['event_date'] ?? '');
+        $category = substr(trim($_POST['category'] ?? ''), 0, 191);
+        $language = substr(trim($_POST['language'] ?? ''), 0, 64);
+        $program = substr(trim($_POST['program'] ?? ''), 0, 191);
+        $location = substr(trim($_POST['location'] ?? ''), 0, 191);
+        $cta_url = substr(trim($_POST['cta_url'] ?? ''), 0, 255);
+        $status = in_array($_POST['status'] ?? 'draft', ['draft', 'published']) ? $_POST['status'] : 'draft';
+        $publish_at = trim($_POST['publish_at'] ?? '') ?: null;
+        // Checkbox: if not present, treat as 0
+        $enabled = isset($_POST['enabled']) ? 1 : 0;
+        if ($title !== '' && $event_date !== '') {
+            $st = db()->prepare('INSERT INTO events(title, description, status, publish_at, event_date, category, language, program, location, cta_url, enabled) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+            $st->execute([$title, $description, $status, $publish_at, $event_date, $category, $language, $program, $location, $cta_url, $enabled]);
+        }
+        header('Location: ' . base_url('/admin/events'));
+        return '';
+    }
+    public function eventsUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $title = substr(trim($_POST['title'] ?? ''), 0, 191);
+        $description = trim($_POST['description'] ?? '');
+        $event_date = trim($_POST['event_date'] ?? '');
+        $category = substr(trim($_POST['category'] ?? ''), 0, 191);
+        $language = substr(trim($_POST['language'] ?? ''), 0, 64);
+        $program = substr(trim($_POST['program'] ?? ''), 0, 191);
+        $location = substr(trim($_POST['location'] ?? ''), 0, 191);
+        $cta_url = substr(trim($_POST['cta_url'] ?? ''), 0, 255);
+        $status = in_array($_POST['status'] ?? 'draft', ['draft', 'published']) ? $_POST['status'] : 'draft';
+        $publish_at = trim($_POST['publish_at'] ?? '') ?: null;
+        // Checkbox: if not present, treat as 0
+        $enabled = isset($_POST['enabled']) ? 1 : 0;
+        if ($id) {
+            $st = db()->prepare('UPDATE events SET title=?, description=?, status=?, publish_at=?, event_date=?, category=?, language=?, program=?, location=?, cta_url=?, enabled=? WHERE id=?');
+            $st->execute([$title, $description, $status, $publish_at, $event_date, $category, $language, $program, $location, $cta_url, $enabled, $id]);
+        }
+        header('Location: ' . base_url('/admin/events'));
+        return '';
+    }
+    public function eventsDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('DELETE FROM events WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/events'));
+        return '';
+    }
+
+    public function eventsToggle(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('UPDATE events SET enabled=1-enabled WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/events'));
+        return '';
+    }
+
     // NEWS
     public function newsIndex(): string
     {

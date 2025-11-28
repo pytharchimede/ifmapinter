@@ -23,6 +23,7 @@
                 <a href="<?= base_url('admin/programmes') ?>">Nos Programmes</a>
                 <a href="<?= base_url('admin/formations') ?>">Formations IFMAP</a>
                 <a href="<?= base_url('admin/centres') ?>">Instituts & Centres</a>
+                <a href="<?= base_url('admin/events') ?>">Événements</a>
                 <a href="<?= base_url('admin/partners') ?>">Entreprises & Partenaires</a>
                 <a href="<?= base_url('admin/testimonials') ?>">Témoignages (modération)</a>
                 <span class="nav-label">Actualités</span>

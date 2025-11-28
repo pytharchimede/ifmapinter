@@ -12,7 +12,11 @@ class HomeController
         $programmes = db()->query('SELECT * FROM programmes ORDER BY id DESC LIMIT 3')->fetchAll();
         $formations = db()->query('SELECT * FROM formations ORDER BY id DESC LIMIT 4')->fetchAll();
         $partners = db()->query('SELECT * FROM partners WHERE COALESCE(enabled,1)=1 ORDER BY id DESC LIMIT 8')->fetchAll();
-        $events = db()->query('SELECT * FROM events ORDER BY event_date ASC LIMIT 4')->fetchAll();
+        $events = db()->query("SELECT * FROM events 
+                        WHERE COALESCE(enabled,1)=1 
+                            AND (COALESCE(status,'draft')='published' OR (publish_at IS NOT NULL AND publish_at <= NOW()))
+                            AND event_date >= NOW()
+                        ORDER BY event_date ASC LIMIT 4")->fetchAll();
         $testimonials = db()->query("SELECT * FROM testimonials WHERE COALESCE(status,'pending')='approved' ORDER BY id DESC LIMIT 6")->fetchAll();
         // Stats
         $stats = [

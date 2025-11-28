@@ -578,7 +578,12 @@
                     <div class="event-card">
                         <div class="event-date">
                             <div class="day"><?= date('d', $ts) ?></div>
-                            <div class="month"><?= strftime('%b', $ts) ?></div>
+                            <?php
+                            $m = (int)date('n', $ts);
+                            $monthsFr = [1 => 'jan', 2 => 'févr', 3 => 'mars', 4 => 'avr', 5 => 'mai', 6 => 'juin', 7 => 'juil', 8 => 'août', 9 => 'sept', 10 => 'oct', 11 => 'nov', 12 => 'déc'];
+                            $monthShort = $monthsFr[$m] ?? date('M', $ts);
+                            ?>
+                            <div class="month"><?= htmlspecialchars($monthShort) ?></div>
                         </div>
                         <div class="event-info">
                             <h4><?= htmlspecialchars($e['title']) ?></h4>
@@ -591,61 +596,35 @@
                             <div class="event-actions">
                                 <?php if (!empty($e['cta_url'])): ?>
                                     <a class="btn-outline" href="<?= htmlspecialchars($e['cta_url']) ?>" target="_blank" rel="noopener">Inscription</a>
-                                <?php else: ?>
-                                    <a class="btn-outline" href="#">Inscription</a>
                                 <?php endif; ?>
+                                <?php
+                                $title = $e['title'] ?? 'Événement IFMAP';
+                                $desc  = $e['description'] ?? '';
+                                $start = date('Ymd', $ts);
+                                $end   = date('Ymd', strtotime('+1 day', $ts));
+                                $gcal  = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+                                    . '&text=' . urlencode($title)
+                                    . '&dates=' . $start . '/' . $end
+                                    . '&details=' . urlencode($desc)
+                                    . '&location=' . urlencode('IFMAP');
+                                $ics   = base_url('evenements/ics?id=' . (int)$e['id']);
+                                ?>
+                                <span class="muted" style="margin-left:.4rem;">Ajouter à mon agenda:</span>
+                                <a class="btn-outline" href="<?= $gcal ?>" target="_blank" rel="noopener" title="Ajouter à Google Calendar">
+                                    <i class="fa-brands fa-google"></i>
+                                    <span style="margin-left:.35rem;">Google</span>
+                                </a>
+                                <a class="btn-outline" href="<?= $ics ?>" title="Télécharger un fichier ICS (Apple/Outlook)">
+                                    <i class="fa-regular fa-calendar-plus"></i>
+                                    <span style="margin-left:.35rem;">ICS</span>
+                                </a>
                             </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div class="event-card">
-                    <div class="event-date">
-                        <div class="day">25</div>
-                        <div class="month">nov</div>
-                    </div>
-                    <div class="event-info">
-                        <h4>Webinaire - Master in Marketing</h4>
-                        <div class="meta"><span>2025</span><span>Anglais</span><span>EMBA</span></div>
-                        <p>Session en ligne pour découvrir le programme.</p>
-                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
-                    </div>
-                </div>
-                <div class="event-card">
-                    <div class="event-date">
-                        <div class="day">04</div>
-                        <div class="month">déc</div>
-                    </div>
-                    <div class="event-info">
-                        <h4>Master's programs Virtual Open Day - Fall 2025</h4>
-                        <div class="meta"><span>2025</span><span>Grande École & Masters</span></div>
-                        <p>Échanges avec nos équipes et nos étudiants.</p>
-                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
-                    </div>
-                </div>
-                <div class="event-card">
-                    <div class="event-date">
-                        <div class="day">10</div>
-                        <div class="month">déc</div>
-                    </div>
-                    <div class="event-info">
-                        <h4>Webinar – GE spécial lycéens et classes préparatoires</h4>
-                        <div class="meta"><span>2025</span><span>Grande École & Masters</span></div>
-                        <p>Découvrez nos cursus adaptés et nos voies d’admission.</p>
-                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
-                    </div>
-                </div>
-                <div class="event-card">
-                    <div class="event-date">
-                        <div class="day">12</div>
-                        <div class="month">déc</div>
-                    </div>
-                    <div class="event-info">
-                        <h4>Deadline Round 2 - Submit your application !</h4>
-                        <div class="meta"><span>2025</span><span>Grande École & Masters</span></div>
-                        <p>Clôture de la session – candidatez maintenant.</p>
-                        <div class="event-actions"><a class="btn-outline" href="#">Inscription</a></div>
-                    </div>
+                <div class="info" style="text-align:center;padding:16px;">
+                    <p>Aucun événement à venir pour le moment.</p>
                 </div>
             <?php endif; ?>
         </div>
