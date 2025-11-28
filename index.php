@@ -239,6 +239,19 @@ try {
   // ignore rss cache migration errors
 }
 
+// Ensure partners table has enabled column
+try {
+  $partnersTable = db()->query("SHOW TABLES LIKE 'partners'")->fetchColumn();
+  if ($partnersTable) {
+    $cols = db()->query("SHOW COLUMNS FROM partners")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('enabled', $cols)) {
+      db()->exec("ALTER TABLE partners ADD COLUMN enabled TINYINT(1) NOT NULL DEFAULT 1");
+    }
+  }
+} catch (Throwable $e) {
+  // ignore partners migration errors
+}
+
 // Seed default reliable French RSS sources if none exist
 try {
   $rssTable = db()->query("SHOW TABLES LIKE 'rss_sources'")->fetchColumn();
@@ -361,6 +374,7 @@ $router->post('/admin/partners/create', fn() => require_auth(fn() => (new AdminC
 $router->get('/admin/partners/edit', fn() => require_auth(fn() => (new AdminController())->partnersForm()));
 $router->post('/admin/partners/edit', fn() => require_auth(fn() => (new AdminController())->partnersUpdate()));
 $router->get('/admin/partners/delete', fn() => require_auth(fn() => (new AdminController())->partnersDelete()));
+$router->get('/admin/partners/toggle', fn() => require_auth(fn() => (new AdminController())->partnersToggle()));
 $router->get('/admin/media', fn() => require_auth(fn() => (new AdminController())->mediaIndex()));
 $router->get('/admin/media/create', fn() => require_auth(fn() => (new AdminController())->mediaForm()));
 $router->post('/admin/media/create', fn() => require_auth(fn() => (new AdminController())->mediaStore()));
@@ -492,7 +506,7 @@ $router->get('/formations', fn() => view('public/formations', [
 ]));
 $router->get('/partenaires', fn() => view('public/partners', [
   'title' => 'Partenaires',
-  'items' => db()->query('SELECT * FROM partners ORDER BY id DESC')->fetchAll()
+  'items' => db()->query('SELECT * FROM partners WHERE COALESCE(enabled,1)=1 ORDER BY id DESC')->fetchAll()
 ]));
 $router->get('/galerie', fn() => view('public/gallery', [
   'title' => 'Galerie',

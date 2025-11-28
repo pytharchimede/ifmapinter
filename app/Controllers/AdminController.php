@@ -557,11 +557,29 @@ class AdminController
     public function partnersStore(): string
     {
         require_csrf();
-        $st = db()->prepare('INSERT INTO partners(name, logo_url) VALUES(?,?)');
-        $st->execute([
-            trim($_POST['name'] ?? ''),
-            trim($_POST['logo_url'] ?? ''),
-        ]);
+        $name = trim($_POST['name'] ?? '');
+        $logo_url = trim($_POST['logo_url'] ?? '');
+        $enabled = (int)(($_POST['enabled'] ?? '1') ? 1 : 0);
+        // Optional drag-n-drop upload
+        if (!empty($_FILES['logo_file']['name'])) {
+            $upl = $_FILES['logo_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/partners';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('pr_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $logo_url = base_url('uploads/partners/' . $fname);
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('INSERT INTO partners(name, logo_url, enabled) VALUES(?,?,?)');
+        $st->execute([$name, $logo_url, $enabled]);
         header('Location: ' . base_url('/admin/partners'));
         return '';
     }
@@ -569,12 +587,28 @@ class AdminController
     {
         require_csrf();
         $id = (int)($_POST['id'] ?? 0);
-        $st = db()->prepare('UPDATE partners SET name=?, logo_url=? WHERE id=?');
-        $st->execute([
-            trim($_POST['name'] ?? ''),
-            trim($_POST['logo_url'] ?? ''),
-            $id
-        ]);
+        $name = trim($_POST['name'] ?? '');
+        $logo_url = trim($_POST['logo_url'] ?? '');
+        $enabled = (int)(($_POST['enabled'] ?? '1') ? 1 : 0);
+        if (!empty($_FILES['logo_file']['name'])) {
+            $upl = $_FILES['logo_file'];
+            if ($upl['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($upl['name'], PATHINFO_EXTENSION));
+                $allowedImg = ['jpg', 'jpeg', 'png', 'webp'];
+                $maxSize = 2 * 1024 * 1024;
+                if (in_array($ext, $allowedImg) && $upl['size'] <= $maxSize) {
+                    $baseDir = __DIR__ . '/../../uploads/partners';
+                    if (!is_dir($baseDir)) mkdir($baseDir, 0777, true);
+                    $fname = uniqid('pr_') . '.' . $ext;
+                    $dest = $baseDir . '/' . $fname;
+                    if (move_uploaded_file($upl['tmp_name'], $dest)) {
+                        $logo_url = base_url('uploads/partners/' . $fname);
+                    }
+                }
+            }
+        }
+        $st = db()->prepare('UPDATE partners SET name=?, logo_url=?, enabled=? WHERE id=?');
+        $st->execute([$name, $logo_url, $enabled, $id]);
         header('Location: ' . base_url('/admin/partners'));
         return '';
     }
@@ -583,6 +617,16 @@ class AdminController
         $id = (int)($_GET['id'] ?? 0);
         if ($id) {
             $st = db()->prepare('DELETE FROM partners WHERE id=?');
+            $st->execute([$id]);
+        }
+        header('Location: ' . base_url('/admin/partners'));
+        return '';
+    }
+    public function partnersToggle(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id) {
+            $st = db()->prepare('UPDATE partners SET enabled=1-enabled WHERE id=?');
             $st->execute([$id]);
         }
         header('Location: ' . base_url('/admin/partners'));

@@ -292,13 +292,12 @@
         <div class="partners">
             <?php if (!empty($partners)): ?>
                 <?php foreach ($partners as $p): ?>
-                    <img loading="lazy" src="<?= htmlspecialchars($p['logo_url'] ?? 'https://dummyimage.com/140x70/004b9a/ffffff&text=Logo') ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <?php if (!empty($p['logo_url'])): ?>
+                        <img loading="lazy" src="<?= htmlspecialchars($p['logo_url']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <?php endif; ?>
                 <?php endforeach; ?>
             <?php else: ?>
-                <img loading="lazy" src="https://dummyimage.com/140x70/003d7a/ffffff&text=Total">
-                <img loading="lazy" src="https://dummyimage.com/140x70/002d5a/ffffff&text=Carrefour">
-                <img loading="lazy" src="https://dummyimage.com/140x70/004b9a/ffffff&text=Orange">
-                <img loading="lazy" src="https://dummyimage.com/140x70/0055cc/ffffff&text=Shell">
+                <p>Aucun partenaire pour le moment.</p>
             <?php endif; ?>
         </div>
 
