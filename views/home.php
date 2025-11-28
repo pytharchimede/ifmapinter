@@ -449,6 +449,29 @@
             <?php endif; ?>
         </div>
     </div>
+    <div style="margin:.6rem 0">
+        <!-- Tawk.to widget activé -->
+        <script type="text/javascript">
+            var Tawk_API = Tawk_API || {},
+                Tawk_LoadStart = new Date();
+            (function() {
+                var s1 = document.createElement("script"),
+                    s0 = document.getElementsByTagName("script")[0];
+                s1.async = true;
+                s1.src = 'https://embed.tawk.to/6928cda30d02891959544218/1jb3m6i8h';
+                s1.charset = 'UTF-8';
+                s1.setAttribute('crossorigin', '*');
+                s0.parentNode.insertBefore(s1, s0);
+            })();
+        </script>
+        <!-- Crisp chat (optionnel) -->
+        <!--
+                        <script type="text/javascript">
+                        window.$crisp=[];window.CRISP_WEBSITE_ID="YOUR_WEBSITE_ID";
+                        (function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();
+                        </script>
+                        -->
+    </div>
 </section>
 
 <?php include __DIR__ . '/partials/modal.php'; ?>
