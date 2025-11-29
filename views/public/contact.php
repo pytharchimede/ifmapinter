@@ -55,14 +55,26 @@
                     <h3 style="margin-top:0;font-size:1.05rem;"><?= htmlspecialchars(t('page.contact.channels.title') ?? 'Canaux Directs') ?></h3>
                     <p style="font-size:.85rem;opacity:.75;"><?= htmlspecialchars(t('page.contact.channels.subtitle') ?? 'Choisissez le canal le plus adapté à votre demande.') ?></p>
                     <div class="contact-channels-grid">
-                        <a href="https://wa.me/2250700000000" target="_blank" rel="noopener" class="channel-card" aria-label="WhatsApp conseiller">
+                        <?php
+                        $displayPhone = htmlspecialchars($settings['contact_phone'] ?? '');
+                        $raw = $settings['contact_phone'] ?? '';
+                        $digits = preg_replace('/\D+/', '', $raw);
+                        $last10 = $digits ? substr($digits, -10) : '';
+                        $last10 = (preg_match('/^\d{10}$/', $last10) ? $last10 : '');
+                        $waHref = $last10 ? ('https://wa.me/225' . $last10) : '0171318511';
+                        ?>
+                        <a href="<?= $waHref ?>" target="_blank" rel="noopener" class="channel-card" aria-label="WhatsApp conseiller">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
                                 <path d="M12.04 2c-5.52 0-10 4.48-10 10 0 1.77.47 3.43 1.29 4.86L2 22l5.26-1.38A9.93 9.93 0 0012.04 22c5.52 0 10-4.48 10-10s-4.48-10-10-10zm0 18.2c-1.7 0-3.36-.5-4.78-1.45l-.34-.22-3.12.82.83-3.05-.22-.32A8.18 8.18 0 013.84 12c0-4.52 3.68-8.2 8.2-8.2 4.52 0 8.2 3.68 8.2 8.2s-3.68 8.2-8.2 8.2zm4.52-5.98c-.25-.13-1.47-.72-1.7-.8-.23-.08-.4-.13-.57.13-.17.25-.65.8-.8.97-.15.17-.3.19-.55.06-.25-.13-1.05-.39-2-1.24-.74-.66-1.24-1.47-1.39-1.72-.15-.25-.02-.38.11-.5.12-.12.25-.31.37-.46.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.57-1.37-.78-1.88-.21-.5-.42-.43-.57-.43-.15 0-.32-.02-.49-.02-.17 0-.45.06-.68.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.4 3.87.62.27 1.11.43 1.49.55.62.2 1.18.17 1.62.1.49-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.49-.29z" />
                             </svg>
                             <strong>WhatsApp</strong>
-                            <small>Conseiller</small>
+                            <small><?= $displayPhone ? $displayPhone : 'Conseiller' ?></small>
                         </a>
-                        <a href="mailto:contact@ifmap.ci" class="channel-card" aria-label="Email support">
+                        <?php
+                        $emailRaw = $settings['contact_email'] ?? '';
+                        $emailVal = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : 'info@ifmap.ci';
+                        ?>
+                        <a href="mailto:<?= htmlspecialchars($emailVal) ?>" class="channel-card" aria-label="Email support">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#0055ff" aria-hidden="true">
                                 <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4.99l-8 5-8-5V6l8 5 8-5v2.99z" />
                             </svg>
@@ -80,9 +92,10 @@
                 </div>
                 <div class="card-elevated" style="padding:1.2rem;">
                     <h3 style="margin-top:0;font-size:1.05rem;"><?= htmlspecialchars(t('page.contact.location.title') ?? 'Localisation') ?></h3>
-                    <p style="font-size:.8rem;line-height:1.4;">IFMAP – Niangon Lubafrique, Yopougon<br>Abidjan, Côte d'Ivoire<br><?= htmlspecialchars(t('page.contact.location.hours') ?? 'Ouvert Lun–Sam : 08h30–18h00') ?></p>
+                    <p style="font-size:.8rem;line-height:1.4;">IFMAP – Yopougon<br>Abidjan, Côte d'Ivoire<br><?= htmlspecialchars(t('page.contact.location.hours') ?? 'Ouvert Lun–Sam : 08h30–18h00') ?></p>
                     <div style="height:220px;border-radius:12px;overflow:hidden;position:relative;background:#eef2f7;">
-                        <iframe title="Carte IFMAP" width="100%" height="100%" style="border:0;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Niangon+Lubafrique+Yopougon+Abidjan+Cote+d'Ivoire&output=embed"></iframe>
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.5323551449037!2d-4.089994600000001!3d5.3353733000000005!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfc1c10075970cf1%3A0xfb4983f2f7dcfb2b!2sIFMAP!5e0!3m2!1sfr!2sci!4v1764425526309!5m2!1sfr!2sci" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        <a href="https://maps.app.goo.gl/cLiH8xwZmwgMEx7k7" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:10px;background:#ffffffd0;color:#111;padding:.35rem .6rem;border-radius:8px;font-size:.8rem;text-decoration:none;backdrop-filter: blur(4px);">Ouvrir dans Google Maps</a>
                     </div>
                 </div>
                 <div class="card-elevated" id="faq" style="padding:1.2rem;">

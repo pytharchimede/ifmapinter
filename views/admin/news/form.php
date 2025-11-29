@@ -50,7 +50,17 @@
         </form>
     </div>
 </section>
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<?php
+// Récupération clé TinyMCE avec fallback si config_value() indisponible
+if (function_exists('config_value')) {
+    $tm_key = htmlspecialchars(config_value('tinymce_api_key', 'no-api-key'));
+} else {
+    $cfgPath = dirname(__DIR__, 3) . '/config.php';
+    $cfg = is_file($cfgPath) ? include $cfgPath : [];
+    $tm_key = htmlspecialchars($cfg['tinymce_api_key'] ?? 'no-api-key');
+}
+?>
+<script src="https://cdn.tiny.cloud/1/<?= $tm_key ?>/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
     tinymce.init({
         selector: '#editor',
