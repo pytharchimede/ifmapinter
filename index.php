@@ -422,11 +422,182 @@ try {
         UNIQUE KEY uniq_lang_key (lang, `key`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+    // Seed basic keys for FR/EN
+    $seed = db()->prepare('INSERT INTO translations(lang, `key`, `value`, updated_at) VALUES(?,?,?,NOW())');
+    $pairs = [
+      ['fr', 'nav.home', 'Accueil'],
+      ['fr', 'nav.programmes', 'Programmes'],
+      ['fr', 'nav.formations', 'Formations'],
+      ['fr', 'nav.centres', 'Instituts & Centres'],
+      ['fr', 'nav.campus', 'Campus'],
+      ['fr', 'nav.partners', 'Partenaires'],
+      ['fr', 'nav.news', 'Actualités'],
+      ['fr', 'nav.alumni', 'Alumni'],
+      ['fr', 'nav.contact', 'Contact'],
+      ['fr', 'nav.gallery', 'Galerie'],
+      ['en', 'nav.home', 'Home'],
+      ['en', 'nav.programmes', 'Programs'],
+      ['en', 'nav.formations', 'Trainings'],
+      ['en', 'nav.centres', 'Institutes & Centers'],
+      ['en', 'nav.campus', 'Campus'],
+      ['en', 'nav.partners', 'Partners'],
+      ['en', 'nav.news', 'News'],
+      ['en', 'nav.alumni', 'Alumni'],
+      ['en', 'nav.contact', 'Contact'],
+      ['en', 'nav.gallery', 'Gallery'],
+    ];
+    foreach ($pairs as $p) {
+      try {
+        $seed->execute($p);
+      } catch (Throwable $e) { /* ignore dup */
+      }
+    }
   }
 } catch (Throwable $e) { /* ignore translations migration */
 }
 
+// Languages table (enabled locales managed in admin)
+try {
+  $lgTable = db()->query("SHOW TABLES LIKE 'languages'")->fetchColumn();
+  if (!$lgTable) {
+    db()->exec(
+      "CREATE TABLE languages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(10) NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      flag VARCHAR(50) NULL,
+      flag_url VARCHAR(300) NULL,
+      enabled TINYINT(1) NOT NULL DEFAULT 1,
+      is_default TINYINT(1) NOT NULL DEFAULT 0,
+      UNIQUE KEY uniq_code (code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+    // seed FR/EN
+    $ins = db()->prepare('INSERT INTO languages(code,name,flag,flag_url,enabled,is_default) VALUES(?,?,?,?,1,?)');
+    $ins->execute(['fr', 'Français', 'fr', 'https://flagcdn.com/96x72/fr.png', 1]);
+    $ins->execute(['en', 'English', 'gb', 'https://flagcdn.com/96x72/gb.png', 0]);
+  }
+  // Ensure columns and seed/update FR/EN flags if missing
+  $cols = db()->query("SHOW COLUMNS FROM languages")->fetchAll(PDO::FETCH_COLUMN);
+  if ($cols && !in_array('flag_url', $cols)) {
+    db()->exec("ALTER TABLE languages ADD COLUMN flag_url VARCHAR(300) NULL AFTER flag");
+  }
+  if ($cols && !in_array('is_default', $cols)) {
+    db()->exec("ALTER TABLE languages ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER enabled");
+  }
+  // Upsert FR/EN with flag_url and defaults
+  $up = db()->prepare('INSERT INTO languages(code,name,flag,flag_url,enabled,is_default) VALUES(?,?,?,?,1,?) ON DUPLICATE KEY UPDATE name=VALUES(name), flag=VALUES(flag), flag_url=IF(VALUES(flag_url) IS NOT NULL, VALUES(flag_url), flag_url), enabled=1');
+  $up->execute(['fr', 'Français', 'fr', 'https://flagcdn.com/96x72/fr.png', 1]);
+  $up->execute(['en', 'English', 'gb', 'https://flagcdn.com/96x72/gb.png', 0]);
+  // Set default FR
+  db()->exec("UPDATE languages SET is_default=1 WHERE code='fr'");
+} catch (Throwable $e) { /* ignore languages migration */
+}
+
 // Enregistrer la visite courante (avant instanciation Router pour simplicité)
+// Assurer les clés de traduction essentielles FR/EN (idempotent)
+try {
+  $pairs = [
+    ['fr', 'nav.institut', 'L’Institut'],
+    ['fr', 'nav.programmes', 'Programmes'],
+    ['fr', 'nav.formations', 'Formations'],
+    ['fr', 'nav.centres', 'Centres'],
+    ['fr', 'nav.campus', 'Campus'],
+    ['fr', 'nav.partners', 'Partenaires'],
+    ['fr', 'nav.news', 'Actualités'],
+    ['fr', 'nav.alumni', 'Alumni'],
+    ['fr', 'nav.contact', 'Contact'],
+    ['fr', 'nav.gallery', 'Galerie'],
+    ['fr', 'btn.login', 'Se connecter'],
+    ['fr', 'btn.newsletter', 'Newsletter'],
+    ['en', 'nav.institut', 'Institute'],
+    ['en', 'nav.programmes', 'Programs'],
+    ['en', 'nav.formations', 'Trainings'],
+    ['en', 'nav.centres', 'Centers'],
+    ['en', 'nav.campus', 'Campus'],
+    ['en', 'nav.partners', 'Partners'],
+    ['en', 'nav.news', 'News'],
+    ['en', 'nav.alumni', 'Alumni'],
+    ['en', 'nav.contact', 'Contact'],
+    ['en', 'nav.gallery', 'Gallery'],
+    ['en', 'btn.login', 'Sign in'],
+    ['en', 'btn.newsletter', 'Newsletter'],
+    // Pages titles & subtitles
+    ['fr', 'page.news.title', 'Actualités'],
+    ['en', 'page.news.title', 'News'],
+    ['fr', 'page.programmes.title', 'Programmes'],
+    ['en', 'page.programmes.title', 'Programs'],
+    ['fr', 'page.centres.title', 'Instituts & Centres IFMAP'],
+    ['en', 'page.centres.title', 'Institutes & Centers IFMAP'],
+    ['fr', 'page.centres.subtitle', "Découvrez nos pôles d'excellence et d'innovation."],
+    ['en', 'page.centres.subtitle', 'Discover our hubs of excellence and innovation.'],
+    ['fr', 'page.formations.title', 'Formations IFMAP'],
+    ['en', 'page.formations.title', 'IFMAP Trainings'],
+    ['fr', 'page.formations.subtitle', 'Des formations professionnalisantes adaptées au marché africain.'],
+    ['en', 'page.formations.subtitle', 'Professional trainings adapted to the African market.'],
+    ['fr', 'page.partners.title', 'Partenaires'],
+    ['en', 'page.partners.title', 'Partners'],
+    ['fr', 'page.gallery.title', 'Galerie'],
+    ['en', 'page.gallery.title', 'Gallery'],
+    ['fr', 'page.institut.title', "L'Institut IFMAP"],
+    ['en', 'page.institut.title', 'IFMAP Institute'],
+    ['fr', 'page.campus.title', 'Campus'],
+    ['en', 'page.campus.title', 'Campus'],
+    ['fr', 'page.campus.status', 'Projet en cours'],
+    ['en', 'page.campus.status', 'Work in progress'],
+    ['fr', 'page.alumni.title', 'Alumni'],
+    ['en', 'page.alumni.title', 'Alumni'],
+    ['fr', 'page.contact.title', 'Contact'],
+    ['en', 'page.contact.title', 'Contact'],
+    ['fr', 'page.event_register.title', 'Inscription'],
+    ['en', 'page.event_register.title', 'Registration'],
+    ['fr', 'page.event_register.title_prefix', 'Inscription –'],
+    ['en', 'page.event_register.title_prefix', 'Registration –'],
+    // Forms & common labels/messages
+    ['fr', 'form.contact.success', 'Message envoyé. Merci !'],
+    ['en', 'form.contact.success', 'Message sent. Thank you!'],
+    ['fr', 'form.event.name_required', 'Veuillez renseigner votre nom.'],
+    ['en', 'form.event.name_required', 'Please enter your name.'],
+    ['fr', 'form.event.full', 'Désolé, cet événement est complet.'],
+    ['en', 'form.event.full', 'Sorry, this event is full.'],
+    ['fr', 'form.event.success', 'Inscription enregistrée. Merci !'],
+    ['en', 'form.event.success', 'Registration submitted. Thank you!'],
+    ['fr', 'form.common.yes', 'Oui'],
+    ['en', 'form.common.yes', 'Yes'],
+    ['fr', 'form.common.no', 'Non'],
+    ['en', 'form.common.no', 'No'],
+    // Newsletter messages
+    ['fr', 'newsletter.success', 'Inscription réussie'],
+    ['en', 'newsletter.success', 'Subscription successful'],
+    ['fr', 'newsletter.already', 'Cette adresse est déjà inscrite'],
+    ['en', 'newsletter.already', 'This email is already subscribed'],
+    ['fr', 'newsletter.invalid', 'Adresse email invalide'],
+    ['en', 'newsletter.invalid', 'Invalid email address'],
+    // Errors
+    ['fr', 'errors.article_not_found', 'Article introuvable'],
+    ['en', 'errors.article_not_found', 'Article not found'],
+    ['fr', 'errors.event_not_found', 'Événement introuvable'],
+    ['en', 'errors.event_not_found', 'Event not found'],
+    // Emails templates
+    ['fr', 'email.event.confirmation_subject', 'Confirmation inscription –'],
+    ['en', 'email.event.confirmation_subject', 'Registration confirmation –'],
+    ['fr', 'email.event.confirmation_body', "Bonjour {{name}},\n\nVotre inscription à l'événement \"{{event}}\" est enregistrée (statut: en attente).\nNous vous confirmerons prochainement.\n\nCordialement,\nIFMAP"],
+    ['en', 'email.event.confirmation_body', "Hello {{name}},\n\nYour registration to the event \"{{event}}\" has been recorded (status: pending).\nWe will confirm shortly.\n\nBest regards,\nIFMAP"],
+    ['fr', 'email.event.admin_subject', 'Nouvelle inscription événement'],
+    ['en', 'email.event.admin_subject', 'New event registration'],
+    ['fr', 'email.event.admin_body', "Événement: {{event}}\nNom: {{name}}\nEmail: {{email}}\nTéléphone: {{phone}}\nConsentement: {{consent}}\nMessage:\n{{message}}"],
+    ['en', 'email.event.admin_body', "Event: {{event}}\nName: {{name}}\nEmail: {{email}}\nPhone: {{phone}}\nConsent: {{consent}}\nMessage:\n{{message}}"],
+  ];
+  $up = db()->prepare('INSERT INTO translations(lang, `key`, `value`, updated_at) VALUES(?,?,?,NOW()) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`)');
+  foreach ($pairs as $p) {
+    try {
+      $up->execute($p);
+    } catch (Throwable $e) { /* ignore */
+    }
+  }
+} catch (Throwable $e) { /* ignore seed */
+}
+
 try {
   $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
   $path = parse_url($reqUri, PHP_URL_PATH) ?: '/';
@@ -522,12 +693,12 @@ $router->get('/evenements/ics', function () {
 });
 $router->get('/evenements/inscription', function () {
   $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-  if ($id <= 0) return view('errors/404', ['title' => 'Événement introuvable']);
+  if ($id <= 0) return view('errors/404', ['title' => t('errors.event_not_found')]);
   $st = db()->prepare('SELECT * FROM events WHERE id=?');
   $st->execute([$id]);
   $event = $st->fetch();
-  if (!$event) return view('errors/404', ['title' => 'Événement introuvable']);
-  return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'event' => $event]);
+  if (!$event) return view('errors/404', ['title' => t('errors.event_not_found')]);
+  return view('public/event_register', ['title' => t('page.event_register.title_prefix') . ' ' . $event['title'], 'event' => $event]);
 });
 $router->post('/evenements/inscription', function () {
   require_csrf();
@@ -536,8 +707,8 @@ $router->post('/evenements/inscription', function () {
   $st->execute([$id]);
   $event = $st->fetch();
   if (!$event) {
-    $error = 'Événement introuvable.';
-    return view('public/event_register', ['title' => 'Inscription', 'error' => $error, 'event' => null]);
+    $error = t('errors.event_not_found');
+    return view('public/event_register', ['title' => t('page.event_register.title'), 'error' => $error, 'event' => null]);
   }
   $name = substr(trim($_POST['name'] ?? ''), 0, 190);
   $email = substr(trim($_POST['email'] ?? ''), 0, 190);
@@ -545,8 +716,8 @@ $router->post('/evenements/inscription', function () {
   $message = trim($_POST['message'] ?? '');
   $consent = isset($_POST['consent']) ? 1 : 0;
   if ($name === '') {
-    $error = 'Veuillez renseigner votre nom.';
-    return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'error' => $error, 'event' => $event]);
+    $error = t('form.event.name_required');
+    return view('public/event_register', ['title' => t('page.event_register.title_prefix') . ' ' . $event['title'], 'error' => $error, 'event' => $event]);
   }
   // Capacity check
   $evtInfo = db()->prepare('SELECT capacity FROM events WHERE id=?');
@@ -558,8 +729,8 @@ $router->post('/evenements/inscription', function () {
     $cntStmt->execute([$event['id']]);
     $current = (int)$cntStmt->fetchColumn();
     if ($current >= $capacity) {
-      $error = 'Désolé, cet événement est complet.';
-      return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'error' => $error, 'event' => $event]);
+      $error = t('form.event.full');
+      return view('public/event_register', ['title' => t('page.event_register.title_prefix') . ' ' . $event['title'], 'error' => $error, 'event' => $event]);
     }
   }
   $ins = db()->prepare('INSERT INTO event_registrations(event_id,name,email,phone,message,status,consent) VALUES(?,?,?,?,?,?,?)');
@@ -567,8 +738,8 @@ $router->post('/evenements/inscription', function () {
   $regId = db()->lastInsertId();
   // Emails (best effort)
   if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $subject = 'Confirmation inscription – ' . $event['title'];
-    $body = "Bonjour $name,\n\nVotre inscription à l'événement \"" . $event['title'] . "\" est enregistrée (statut: en attente).\nNous vous confirmerons prochainement.\n\nCordialement,\nIFMAP";
+    $subject = t('email.event.confirmation_subject') . ' ' . $event['title'];
+    $body = str_replace(['{{name}}', '{{event}}'], [$name, $event['title']], t('email.event.confirmation_body'));
     @mail($email, $subject, $body);
   }
   $adminEmail = (function () {
@@ -576,12 +747,19 @@ $router->post('/evenements/inscription', function () {
     return $cfg['admin_email'] ?? '';
   })();
   if ($adminEmail && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
-    $subjectA = 'Nouvelle inscription événement #' . $event['id'];
-    $bodyA = "Événement: " . $event['title'] . "\nNom: $name\nEmail: $email\nTéléphone: $phone\nConsentement: " . ($consent ? 'Oui' : 'Non') . "\nMessage:\n$message";
+    $subjectA = t('email.event.admin_subject') . ' #' . $event['id'];
+    $bodyA = str_replace(['{{event}}', '{{name}}', '{{email}}', '{{phone}}', '{{consent}}', '{{message}}'], [
+      $event['title'],
+      $name,
+      $email,
+      $phone,
+      ($consent ? t('form.common.yes') : t('form.common.no')),
+      $message
+    ], t('email.event.admin_body'));
     @mail($adminEmail, $subjectA, $bodyA);
   }
-  $success = 'Inscription enregistrée. Merci !';
-  return view('public/event_register', ['title' => 'Inscription – ' . $event['title'], 'success' => $success, 'event' => $event]);
+  $success = t('form.event.success');
+  return view('public/event_register', ['title' => t('page.event_register.title_prefix') . ' ' . $event['title'], 'success' => $success, 'event' => $event]);
 });
 $router->post('/temoignages/soumettre', fn() => (new HomeController())->submitTestimonial());
 
@@ -728,7 +906,7 @@ $router->post('/admin/centres/section/save', fn() => require_auth(fn() => (new A
 
 // Pages publiques listes
 $router->get('/actualites', fn() => view('public/news', [
-  'title' => 'Actualités',
+  'title' => t('page.news.title'),
   'items' => db()->query("SELECT * FROM news WHERE COALESCE(status,'published')='published' ORDER BY COALESCE(published_at, created_at) DESC")->fetchAll(),
   'rss' => (function () {
     // Load enabled RSS sources from DB with cache
@@ -780,17 +958,74 @@ $router->get('/actualites', fn() => view('public/news', [
     return array_slice($items, 0, 6);
   })()
 ]));
+
+// English alias for news
+$router->get('/news', fn() => view('public/news', [
+  'title' => t('page.news.title'),
+  'items' => db()->query("SELECT * FROM news WHERE COALESCE(status,'published')='published' ORDER BY COALESCE(published_at, created_at) DESC")->fetchAll(),
+  'rss' => (function () {
+    // Reuse same RSS block
+    $rows = db()->query('SELECT url FROM rss_sources WHERE enabled=1 ORDER BY id DESC')->fetchAll();
+    $items = [];
+    $now = new DateTime('now');
+    $ttlMinutes = 30;
+    foreach ($rows as $r) {
+      $url = $r['url'];
+      $stc = db()->prepare('SELECT title, link, pub_date, description FROM rss_items_cache WHERE source_url=? AND expires_at > ? ORDER BY pub_date DESC LIMIT 6');
+      $stc->execute([$url, $now->format('Y-m-d H:i:s')]);
+      $cached = $stc->fetchAll();
+      if (!empty($cached)) {
+        foreach ($cached as $c) {
+          $items[] = [
+            'title' => $c['title'],
+            'link' => $c['link'],
+            'pubDate' => $c['pub_date'],
+            'description' => $c['description'],
+          ];
+        }
+        continue;
+      }
+      try {
+        $xml = @simplexml_load_file($url);
+        if ($xml && isset($xml->channel->item)) {
+          $ins = db()->prepare('INSERT INTO rss_items_cache(source_url,title,link,pub_date,description,fetched_at,expires_at) VALUES(?,?,?,?,?,?,?)');
+          $expires = (clone $now)->modify('+' . $ttlMinutes . ' minutes')->format('Y-m-d H:i:s');
+          foreach ($xml->channel->item as $it) {
+            $title = (string)$it->title;
+            $link = (string)$it->link;
+            $pub = (string)$it->pubDate;
+            $pubDate = $pub ? date('Y-m-d H:i:s', strtotime($pub)) : null;
+            $desc = strip_tags((string)$it->description);
+            $ins->execute([$url, $title, $link, $pubDate, $desc, $now->format('Y-m-d H:i:s'), $expires]);
+            $items[] = [
+              'title' => $title,
+              'link' => $link,
+              'pubDate' => $pubDate,
+              'description' => $desc,
+            ];
+          }
+        }
+      } catch (Throwable $e) {
+      }
+    }
+    return array_slice($items, 0, 6);
+  })()
+]));
 $router->get('/actualites/article', function () {
   $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-  if ($id <= 0) return view('errors/404', ['title' => 'Article introuvable']);
+  if ($id <= 0) return view('errors/404', ['title' => t('errors.article_not_found')]);
   $stmt = db()->prepare('SELECT * FROM news WHERE id = ?');
   $stmt->execute([$id]);
   $article = $stmt->fetch();
-  if (!$article) return view('errors/404', ['title' => 'Article introuvable']);
+  if (!$article) return view('errors/404', ['title' => t('errors.article_not_found')]);
   return view('public/news_show', ['title' => $article['title'], 'article' => $article]);
 });
 $router->get('/programmes', fn() => view('public/programmes', [
-  'title' => 'Programmes',
+  'title' => t('page.programmes.title'),
+  'items' => db()->query('SELECT * FROM programmes ORDER BY id DESC')->fetchAll()
+]));
+$router->get('/programs', fn() => view('public/programmes', [
+  'title' => t('page.programmes.title'),
   'items' => db()->query('SELECT * FROM programmes ORDER BY id DESC')->fetchAll()
 ]));
 $router->get('/centres', fn() => view('public/centres', [
@@ -798,13 +1033,28 @@ $router->get('/centres', fn() => view('public/centres', [
     $st = db()->prepare('SELECT title FROM sections WHERE `key`=?');
     $st->execute(['centres']);
     $t = $st->fetchColumn();
-    return $t ?: 'Instituts & Centres IFMAP';
+    return $t ?: t('page.centres.title');
   })(),
   'subtitle' => (function () {
     $st = db()->prepare('SELECT subtitle FROM sections WHERE `key`=?');
     $st->execute(['centres']);
     $t = $st->fetchColumn();
-    return $t ?: "Découvrez nos pôles d'excellence et d'innovation.";
+    return $t ?: t('page.centres.subtitle');
+  })(),
+  'items' => db()->query("SELECT * FROM centres WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll()
+]));
+$router->get('/centers', fn() => view('public/centres', [
+  'title' => (function () {
+    $st = db()->prepare('SELECT title FROM sections WHERE `key`=?');
+    $st->execute(['centres']);
+    $t = $st->fetchColumn();
+    return $t ?: t('page.centres.title');
+  })(),
+  'subtitle' => (function () {
+    $st = db()->prepare('SELECT subtitle FROM sections WHERE `key`=?');
+    $st->execute(['centres']);
+    $t = $st->fetchColumn();
+    return $t ?: t('page.centres.subtitle');
   })(),
   'items' => db()->query("SELECT * FROM centres WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll()
 ]));
@@ -813,22 +1063,45 @@ $router->get('/formations', fn() => view('public/formations', [
     $st = db()->prepare('SELECT title FROM sections WHERE `key`=?');
     $st->execute(['formations']);
     $t = $st->fetchColumn();
-    return $t ?: 'Formations IFMAP';
+    return $t ?: t('page.formations.title');
   })(),
   'subtitle' => (function () {
     $st = db()->prepare('SELECT subtitle FROM sections WHERE `key`=?');
     $st->execute(['formations']);
     $t = $st->fetchColumn();
-    return $t ?: 'Des formations professionnalisantes adaptées au marché africain.';
+    return $t ?: t('page.formations.subtitle');
+  })(),
+  'items' => db()->query("SELECT * FROM formations WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll()
+]));
+$router->get('/trainings', fn() => view('public/formations', [
+  'title' => (function () {
+    $st = db()->prepare('SELECT title FROM sections WHERE `key`=?');
+    $st->execute(['formations']);
+    $t = $st->fetchColumn();
+    return $t ?: t('page.formations.title');
+  })(),
+  'subtitle' => (function () {
+    $st = db()->prepare('SELECT subtitle FROM sections WHERE `key`=?');
+    $st->execute(['formations']);
+    $t = $st->fetchColumn();
+    return $t ?: t('page.formations.subtitle');
   })(),
   'items' => db()->query("SELECT * FROM formations WHERE COALESCE(status,'published')='published' ORDER BY id DESC")->fetchAll()
 ]));
 $router->get('/partenaires', fn() => view('public/partners', [
-  'title' => 'Partenaires',
+  'title' => t('page.partners.title'),
+  'items' => db()->query('SELECT * FROM partners WHERE COALESCE(enabled,1)=1 ORDER BY id DESC')->fetchAll()
+]));
+$router->get('/partners', fn() => view('public/partners', [
+  'title' => t('page.partners.title'),
   'items' => db()->query('SELECT * FROM partners WHERE COALESCE(enabled,1)=1 ORDER BY id DESC')->fetchAll()
 ]));
 $router->get('/galerie', fn() => view('public/gallery', [
-  'title' => 'Galerie',
+  'title' => t('page.gallery.title'),
+  'media' => db()->query('SELECT * FROM media ORDER BY id DESC')->fetchAll()
+]));
+$router->get('/gallery', fn() => view('public/gallery', [
+  'title' => t('page.gallery.title'),
   'media' => db()->query('SELECT * FROM media ORDER BY id DESC')->fetchAll()
 ]));
 $router->get('/galerie/data', function () {
@@ -858,20 +1131,27 @@ $router->get('/galerie/data', function () {
 
 // Pages: Institut, Campus, Alumni, Contact
 $router->get('/institut', fn() => view('public/institut', [
-  'title' => "L'Institut IFMAP"
+  'title' => t('page.institut.title')
+]));
+$router->get('/institute', fn() => view('public/institut', [
+  'title' => t('page.institut.title')
 ]));
 
 $router->get('/campus', fn() => view('public/campus', [
-  'title' => 'Campus',
-  'status' => 'Projet en cours',
+  'title' => t('page.campus.title'),
+  'status' => t('page.campus.status'),
 ]));
 
 $router->get('/alumni', fn() => view('public/alumni', [
-  'title' => 'Alumni'
+  'title' => t('page.alumni.title')
 ]));
+$router->get('/contact', fn() => view('public/contact', [
+  'title' => t('page.contact.title')
+]));
+$router->get('/home', fn() => (new HomeController())->index());
 
 $router->get('/contact', fn() => view('public/contact', [
-  'title' => 'Contact'
+  'title' => t('page.contact.title')
 ]));
 $router->post('/contact', function () {
   require_csrf();
@@ -883,8 +1163,8 @@ $router->post('/contact', function () {
     $st = db()->prepare('INSERT INTO contact_messages(name,email,phone,message) VALUES(?,?,?,?)');
     $st->execute([$name, $email, $phone, $message]);
   }
-  $success = 'Message envoyé. Merci !';
-  return view('public/contact', ['title' => 'Contact', 'success' => $success]);
+  $success = t('form.contact.success');
+  return view('public/contact', ['title' => t('page.contact.title'), 'success' => $success]);
 });
 
 // Admin: Messages de contact
@@ -908,9 +1188,25 @@ $router->post('/admin/upload', fn() => require_auth(fn() => (new AdminController
 $router->get('/admin/settings', fn() => require_auth(fn() => (new AdminController())->settingsForm()));
 $router->post('/admin/settings', fn() => require_auth(fn() => (new AdminController())->settingsSave()));
 
+// Admin Languages
+$router->get('/admin/languages', fn() => require_auth(fn() => (new AdminController())->languagesIndex()));
+$router->post('/admin/languages/create', fn() => require_auth(fn() => (new AdminController())->languagesStore()));
+$router->get('/admin/languages/edit', fn() => require_auth(fn() => (new AdminController())->languagesForm()));
+$router->post('/admin/languages/edit', fn() => require_auth(fn() => (new AdminController())->languagesUpdate()));
+$router->get('/admin/languages/toggle', fn() => require_auth(fn() => (new AdminController())->languagesToggle()));
+$router->get('/admin/languages/default', fn() => require_auth(fn() => (new AdminController())->languagesSetDefault()));
+
 // Admin Analytics (visites)
 $router->get('/admin/analytics/visits', fn() => require_auth(fn() => (new AdminController())->analyticsVisits()));
 $router->get('/admin/analytics/visits/export.csv', fn() => require_auth(fn() => (new AdminController())->analyticsVisitsExport()));
+
+// Admin Translations
+$router->get('/admin/translations', fn() => require_auth(fn() => (new AdminController())->translationsIndex()));
+$router->post('/admin/translations/create', fn() => require_auth(fn() => (new AdminController())->translationsStore()));
+$router->post('/admin/translations/update', fn() => require_auth(fn() => (new AdminController())->translationsUpdate()));
+$router->get('/admin/translations/delete', fn() => require_auth(fn() => (new AdminController())->translationsDelete()));
+$router->get('/admin/translations/export.csv', fn() => require_auth(fn() => (new AdminController())->translationsExportCsv()));
+$router->post('/admin/translations/import.csv', fn() => require_auth(fn() => (new AdminController())->translationsImportCsv()));
 
 // Newsletter subscribe endpoint
 $router->post('/newsletter/subscribe', function () {
@@ -923,12 +1219,12 @@ $router->post('/newsletter/subscribe', function () {
       $st = db()->prepare('INSERT INTO newsletter_subscriptions(email) VALUES(?)');
       $st->execute([$email]);
       $ok = true;
-      $msg = 'Inscription réussie';
+      $msg = t('newsletter.success');
     } catch (Throwable $e) {
-      $msg = 'Cette adresse est déjà inscrite';
+      $msg = t('newsletter.already');
     }
   } else {
-    $msg = 'Adresse email invalide';
+    $msg = t('newsletter.invalid');
   }
   header('Content-Type: application/json');
   echo json_encode(['ok' => $ok, 'message' => $msg]);
@@ -986,6 +1282,25 @@ $router->get('/alumni/cv-template/compact/pdf', function () {
 
 // Exemple: autres pages statiques réutilisables si besoin
 // $router->get('/formations', fn () => view('formations', ['title' => 'Formations']));
+
+// i18n JSON endpoint: expose translations for a given lang
+$router->get('/i18n.json', function () {
+  $lang = trim($_GET['lang'] ?? resolve_lang());
+  header('Content-Type: application/json');
+  try {
+    $st = db()->prepare('SELECT `key`, `value` FROM translations WHERE lang=? ORDER BY `key` ASC');
+    $st->execute([$lang]);
+    $rows = $st->fetchAll();
+    $out = [];
+    foreach ($rows as $r) {
+      $out[$r['key']] = $r['value'];
+    }
+    echo json_encode(['lang' => $lang, 'translations' => $out]);
+  } catch (Throwable $e) {
+    echo json_encode(['lang' => $lang, 'translations' => []]);
+  }
+  return '';
+});
 
 // Dispatch
 $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $_SERVER['REQUEST_URI'] ?? '/');

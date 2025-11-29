@@ -4,6 +4,31 @@ namespace App\Controllers;
 
 class HomeController
 {
+    protected function convertToWebpIfPossibleGeneric(string $sourcePath, string $ext, string $baseDir, string &$urlField, string $publicSubdir): void
+    {
+        $lower = strtolower($ext);
+        if ($lower === 'webp') return;
+        try {
+            $img = null;
+            if ($lower === 'jpg' || $lower === 'jpeg') {
+                if (function_exists('imagecreatefromjpeg')) $img = @imagecreatefromjpeg($sourcePath);
+            } elseif ($lower === 'png') {
+                if (function_exists('imagecreatefrompng')) $img = @imagecreatefrompng($sourcePath);
+            }
+            if ($img && function_exists('imagewebp')) {
+                $webpName = pathinfo($sourcePath, PATHINFO_FILENAME) . '.webp';
+                $webpPath = $baseDir . '/' . $webpName;
+                @imagepalettetotruecolor($img);
+                @imagealphablending($img, true);
+                @imagesavealpha($img, true);
+                if (@imagewebp($img, $webpPath, 80)) {
+                    $urlField = base_url($publicSubdir . '/' . $webpName);
+                }
+                imagedestroy($img);
+            }
+        } catch (\Throwable $e) { /* ignore */
+        }
+    }
     public function index(): string
     {
         $title = 'IFMAP – Accueil';

@@ -833,8 +833,6 @@ class AdminController
         header('Location: ' . base_url('/admin/centres'));
         return '';
     }
-
-    // Partenaires
     public function partnersIndex(): string
     {
         $items = db()->query('SELECT * FROM partners ORDER BY id DESC')->fetchAll();
@@ -850,7 +848,6 @@ class AdminController
             $st->execute([$id]);
             $item = $st->fetch();
         }
-        $title = $id ? 'Modifier Partenaire' : 'Créer Partenaire';
         return view('admin/partners/form', compact('title', 'item'));
     }
     public function partnersStore(): string
@@ -1745,5 +1742,335 @@ class AdminController
         }
         fclose($out);
         return '';
+    }
+
+    // ===== Admin Languages =====
+    public function languagesIndex(): string
+    {
+        $title = 'Langues du site';
+        $rows = [];
+        try {
+            // Ensure is_default column exists
+            try {
+                $cols = db()->query("SHOW COLUMNS FROM languages")->fetchAll(\PDO::FETCH_COLUMN);
+                if ($cols && !in_array('is_default', $cols)) {
+                    db()->exec("ALTER TABLE languages ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER enabled");
+                    // set FR default if none
+                    db()->exec("UPDATE languages SET is_default=1 WHERE code='fr'");
+                }
+                if ($cols && !in_array('flag_url', $cols)) {
+                    db()->exec("ALTER TABLE languages ADD COLUMN flag_url VARCHAR(300) NULL AFTER flag");
+                }
+            } catch (\Throwable $e) { /* ignore */
+            }
+            $rows = db()->query('SELECT * FROM languages ORDER BY is_default DESC, enabled DESC, name ASC')->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        return view('admin/languages/index', compact('title', 'rows'));
+    }
+
+    public function languagesForm(): string
+    {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $item = null;
+        if ($id) {
+            try {
+                $st = db()->prepare('SELECT * FROM languages WHERE id=?');
+                $st->execute([$id]);
+                $item = $st->fetch();
+            } catch (\Throwable $e) {
+            }
+        }
+        $title = $id ? 'Modifier langue' : 'Ajouter langue';
+        return view('admin/languages/form', compact('title', 'item'));
+    }
+
+    public function languagesUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $code = strtolower(trim($_POST['code'] ?? ''));
+        $name = trim($_POST['name'] ?? '');
+        $flag = trim($_POST['flag'] ?? '');
+        $flag_url = trim($_POST['flag_url'] ?? '');
+        if ($id <= 0 || $code === '' || $name === '' || !preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $code)) {
+            $error = 'Champs invalides';
+            $title = 'Modifier langue';
+            $item = ['id' => $id, 'code' => $code, 'name' => $name, 'flag' => $flag, 'flag_url' => $flag_url];
+            return view('admin/languages/form', compact('title', 'item', 'error'));
+        }
+        try {
+            // Ensure flag_url column exists
+            try {
+                $cols = db()->query("SHOW COLUMNS FROM languages")->fetchAll(\PDO::FETCH_COLUMN);
+                if ($cols && !in_array('flag_url', $cols)) {
+                    db()->exec("ALTER TABLE languages ADD COLUMN flag_url VARCHAR(300) NULL AFTER flag");
+                }
+            } catch (\Throwable $eCol) {
+            }
+            $st = db()->prepare('UPDATE languages SET code=?, name=?, flag=?, flag_url=? WHERE id=?');
+            $st->execute([$code, $name, $flag, ($flag_url !== '' ? $flag_url : null), $id]);
+        } catch (\Throwable $e) {
+        }
+        header('Location: ' . base_url('/admin/languages'));
+        return '';
+    }
+
+    public function languagesStore(): string
+    {
+        require_csrf();
+        $code = strtolower(trim($_POST['code'] ?? ''));
+        $name = trim($_POST['name'] ?? '');
+        $flag = trim($_POST['flag'] ?? '');
+        if ($code === '' || $name === '' || !preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $code)) {
+            $error = 'Code de langue invalide (ex: fr, en, en-US)';
+            $title = 'Langues du site';
+            $rows = [];
+            try {
+                $rows = db()->query('SELECT * FROM languages ORDER BY enabled DESC, name ASC')->fetchAll();
+            } catch (\Throwable $e) { /* table peut ne pas exister */
+            }
+            return view('admin/languages/index', compact('title', 'rows', 'error'));
+        }
+        try {
+            // Ensure flag_url column exists
+            try {
+                $cols = db()->query("SHOW COLUMNS FROM languages")->fetchAll(\PDO::FETCH_COLUMN);
+                if ($cols && !in_array('flag_url', $cols)) {
+                    db()->exec("ALTER TABLE languages ADD COLUMN flag_url VARCHAR(300) NULL AFTER flag");
+                }
+            } catch (\Throwable $eCol) {
+            }
+
+            // Attempt to auto-resolve flag_url via RestCountries if flag missing
+            $flagUrl = null;
+            $flagCode = $flag !== '' ? strtolower($flag) : strtolower(explode('-', $code)[0]);
+            if ($flag === '' || $flagCode === 'en') {
+                try {
+                    $api = 'https://restcountries.com/v3.1/lang/' . urlencode(explode('-', $code)[0]);
+                    $json = @file_get_contents($api);
+                    if ($json) {
+                        $data = json_decode($json, true);
+                        if (is_array($data) && !empty($data)) {
+                            $first = $data[0];
+                            if (isset($first['flags']['png'])) {
+                                $flagUrl = $first['flags']['png'];
+                            } elseif (isset($first['flags']['svg'])) {
+                                $flagUrl = $first['flags']['svg'];
+                            }
+                        }
+                    }
+                } catch (\Throwable $eApi) {
+                }
+            }
+
+            $st = db()->prepare('INSERT INTO languages(code,name,flag,flag_url,enabled) VALUES(?,?,?,?,1)');
+            $st->execute([$code, $name, $flag, $flagUrl]);
+            $success = 'Langue ajoutée';
+        } catch (\Throwable $e) {
+            // Si la table n'existe pas encore, on la crée à la volée
+            try {
+                db()->exec(
+                    "CREATE TABLE IF NOT EXISTS languages (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        code VARCHAR(10) NOT NULL,
+                        name VARCHAR(100) NOT NULL,
+                        flag VARCHAR(50) NULL,
+                        flag_url VARCHAR(300) NULL,
+                        enabled TINYINT(1) NOT NULL DEFAULT 1,
+                        UNIQUE KEY uniq_code (code)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                );
+                $st = db()->prepare('INSERT INTO languages(code,name,flag,flag_url,enabled) VALUES(?,?,?,?,1)');
+                $st->execute([$code, $name, $flag, null]);
+            } catch (\Throwable $e2) { /* ignore */
+            }
+        }
+        header('Location: ' . base_url('/admin/languages'));
+        return '';
+    }
+
+    public function languagesToggle(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id > 0) {
+            try {
+                $cur = db()->prepare('SELECT enabled FROM languages WHERE id=?');
+                $cur->execute([$id]);
+                $val = $cur->fetchColumn();
+                if ($val !== false) {
+                    $new = ((int)$val) ? 0 : 1;
+                    $up = db()->prepare('UPDATE languages SET enabled=? WHERE id=?');
+                    $up->execute([$new, $id]);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+        header('Location: ' . base_url('/admin/languages'));
+        return '';
+    }
+
+    public function languagesSetDefault(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id > 0) {
+            try {
+                // Ensure column exists
+                try {
+                    $cols = db()->query("SHOW COLUMNS FROM languages")->fetchAll(\PDO::FETCH_COLUMN);
+                    if ($cols && !in_array('is_default', $cols)) {
+                        db()->exec("ALTER TABLE languages ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER enabled");
+                    }
+                } catch (\Throwable $e) {
+                }
+                db()->exec('UPDATE languages SET is_default=0');
+                $up = db()->prepare('UPDATE languages SET is_default=1 WHERE id=?');
+                $up->execute([$id]);
+            } catch (\Throwable $e) {
+            }
+        }
+        header('Location: ' . base_url('/admin/languages'));
+        return '';
+    }
+
+    // ===== Admin Translations =====
+    public function translationsIndex(): string
+    {
+        $title = 'Traductions du site';
+        $lang = trim($_GET['lang'] ?? resolve_lang());
+        $q = trim($_GET['q'] ?? '');
+        $rows = [];
+        try {
+            $sql = 'SELECT id, lang, `key`, `value`, updated_at FROM translations WHERE lang=?';
+            $params = [$lang];
+            if ($q !== '') {
+                $sql .= ' AND `key` LIKE ?';
+                $params[] = "%$q%";
+            }
+            $sql .= ' ORDER BY `key` ASC';
+            $st = db()->prepare($sql);
+            $st->execute($params);
+            $rows = $st->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        // languages for selector
+        $langs = [];
+        try {
+            $langs = db()->query('SELECT code,name FROM languages WHERE enabled=1 ORDER BY name')->fetchAll();
+        } catch (\Throwable $e) {
+        }
+        return view('admin/translations/index', compact('title', 'lang', 'q', 'rows', 'langs'));
+    }
+
+    public function translationsStore(): string
+    {
+        require_csrf();
+        $lang = trim($_POST['lang'] ?? resolve_lang());
+        $key = trim($_POST['key'] ?? '');
+        $value = trim($_POST['value'] ?? '');
+        if ($key === '') {
+            header('Location: ' . base_url('/admin/translations?lang=' . urlencode($lang)));
+            return '';
+        }
+        try {
+            $st = db()->prepare('INSERT INTO translations(lang, `key`, `value`, updated_at) VALUES(?,?,?,NOW()) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`), updated_at=NOW()');
+            $st->execute([$lang, $key, $value]);
+        } catch (\Throwable $e) {
+        }
+        header('Location: ' . base_url('/admin/translations?lang=' . urlencode($lang)));
+        return '';
+    }
+
+    public function translationsUpdate(): string
+    {
+        require_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $value = trim($_POST['value'] ?? '');
+        if ($id > 0) {
+            try {
+                $st = db()->prepare('UPDATE translations SET `value`=?, updated_at=NOW() WHERE id=?');
+                $st->execute([$value, $id]);
+            } catch (\Throwable $e) {
+            }
+        }
+        $lang = trim($_POST['lang'] ?? resolve_lang());
+        header('Location: ' . base_url('/admin/translations?lang=' . urlencode($lang)));
+        return '';
+    }
+
+    public function translationsDelete(): string
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        $lang = trim($_GET['lang'] ?? resolve_lang());
+        if ($id > 0) {
+            try {
+                db()->prepare('DELETE FROM translations WHERE id=?')->execute([$id]);
+            } catch (\Throwable $e) {
+            }
+        }
+        header('Location: ' . base_url('/admin/translations?lang=' . urlencode($lang)));
+        return '';
+    }
+
+    public function translationsExportCsv(): string
+    {
+        $lang = trim($_GET['lang'] ?? resolve_lang());
+        try {
+            $st = db()->prepare('SELECT `key`, `value` FROM translations WHERE lang=? ORDER BY `key` ASC');
+            $st->execute([$lang]);
+            $rows = $st->fetchAll();
+        } catch (\Throwable $e) {
+            $rows = [];
+        }
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="translations_' . $lang . '.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['key', 'value']);
+        foreach ($rows as $r) {
+            fputcsv($out, [$r['key'], $r['value']]);
+        }
+        fclose($out);
+        return '';
+    }
+
+    public function translationsImportCsv(): string
+    {
+        require_csrf();
+        $lang = trim($_POST['lang'] ?? resolve_lang());
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            header('Location: ' . base_url('/admin/translations?lang=' . urlencode($lang)));
+            return '';
+        }
+        $path = $_FILES['file']['tmp_name'];
+        if (($fh = fopen($path, 'r')) !== false) {
+            // Skip header if present
+            $first = fgetcsv($fh);
+            if ($first && count($first) === 2 && strtolower($first[0]) === 'key') { /* header consumed */
+            } else {
+                if ($first) {
+                    $key = $first[0];
+                    $val = $first[1] ?? '';
+                    $this->upsertTranslation($lang, $key, $val);
+                }
+            }
+            while (($row = fgetcsv($fh)) !== false) {
+                $key = $row[0] ?? '';
+                $val = $row[1] ?? '';
+                if ($key !== '') $this->upsertTranslation($lang, $key, $val);
+            }
+            fclose($fh);
+        }
+        header('Location: ' . base_url('/admin/translations?lang=' . urlencode($lang)));
+        return '';
+    }
+
+    private function upsertTranslation(string $lang, string $key, string $value): void
+    {
+        try {
+            $st = db()->prepare('INSERT INTO translations(lang, `key`, `value`, updated_at) VALUES(?,?,?,NOW()) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`), updated_at=NOW()');
+            $st->execute([$lang, $key, $value]);
+        } catch (\Throwable $e) {
+        }
     }
 }

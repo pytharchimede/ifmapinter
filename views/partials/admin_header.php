@@ -34,6 +34,8 @@
                 <span class="nav-label">Paramètres</span>
                 <a href="<?= base_url('admin/settings') ?>">IFMAP – Logo & Infos</a>
                 <a href="<?= base_url('admin/newsletter') ?>">Newsletter – Inscriptions</a>
+                <a href="<?= base_url('admin/languages') ?>">Langues du site</a>
+                <a href="<?= base_url('admin/translations') ?>">Traductions (expressions)</a>
             </nav>
         </aside>
         <main class="admin-main">
