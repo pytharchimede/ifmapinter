@@ -120,6 +120,38 @@ body.dark .section-title p { color: var(--color-text-light); }
 .grid-3 { grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); }
 .grid-4 { grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
 
+/* Stack flow utility for vertical spacing */
+.stack-flow > * + * { margin-top:1.8rem; }
+
+/* Denser card spacing override (institut governance fix) */
+.grid-tight { display:grid; gap:1.9rem; }
+
+/* Timeline variant compact (to unify styles) */
+.timeline.compact::before { left:0; }
+.timeline.compact { position:relative; }
+.timeline.compact::before { left:10px; width:4px; top:0; bottom:0; background: linear-gradient(180deg,#0055ff,#00c9a7); border-radius:4px; content:""; position:absolute; }
+.timeline.compact .tl-item { position:relative; padding:.75rem .9rem .8rem 2.4rem; background: var(--color-surface); border:1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.timeline.compact .tl-item h4 { margin:0 0 .35rem; font-size:.95rem; font-weight:600; color: var(--color-primary-accent); }
+.timeline.compact .tl-item p { margin:0; font-size:.82rem; color: var(--color-text-light); }
+body.dark .timeline.compact .tl-item { background: var(--color-surface-alt); }
+.timeline.compact .tl-item::before { content:""; position:absolute; left:10px; top:16px; width:16px; height:16px; background: var(--color-primary); border:3px solid #fff; border-radius:50%; box-shadow:0 0 0 4px rgba(0,85,255,.25); }
+
+/* Directeur plein pied */
+.director-grid { display:grid; gap:2.6rem; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); align-items:start; }
+.director-photo { position:relative; background: var(--color-surface); border:1px solid var(--color-border); border-radius: var(--radius-lg); padding:1rem 1.1rem 1.3rem; box-shadow: var(--shadow-md); }
+.director-photo img { width:100%; height:520px; object-fit:cover; object-position:center top; border-radius: var(--radius-md); display:block; box-shadow: var(--shadow-sm); }
+.director-photo h3 { margin:.9rem 0 .4rem; font-size:1.25rem; font-weight:600; color: var(--color-primary-accent); }
+.director-photo p.role { margin:0 0 .6rem; font-size:.9rem; opacity:.8; }
+.director-content { display:flex; flex-direction:column; gap:1.2rem; }
+.director-message { background: var(--color-surface); border:1px solid var(--color-border); border-radius: var(--radius-lg); padding:1.4rem 1.3rem 1.5rem; box-shadow: var(--shadow-lg); }
+body.dark .director-photo, body.dark .director-message { background: var(--color-surface-alt); }
+.director-message p { font-size:.92rem; line-height:1.55; color: var(--color-text-light); margin:0; }
+.director-message p + p { margin-top:1rem; }
+
+@media screen and (max-width:860px){
+    .director-photo img { height:460px; object-position:center top; }
+}
+
 /* ================= CARDS ================= */
 .card, .card-formation, .centre { background: var(--color-surface); border-radius: var(--radius-md); overflow:hidden; box-shadow: var(--shadow-md); position:relative; isolation:isolate; transition: var(--transition-base); }
 .card::before, .card-formation::before, .centre::before { content:''; position:absolute; inset:0; background: linear-gradient(145deg,rgba(0,85,255,0.08),rgba(0,201,167,0.08)); opacity:0; transition: var(--transition-base); }
@@ -343,6 +375,11 @@ body.dark .tl-item { background: var(--color-surface-alt); }
 .card-elevated h3 { margin:0 0 .55rem; font-size:1.1rem; font-weight:600; color: var(--color-primary-accent); }
 .card-elevated p { margin:0; font-size:.9rem; color: var(--color-text-light); }
 body.dark .card-elevated { background: var(--color-surface-alt); }
+
+/* Static variant (no hover glow) */
+.card-static { box-shadow: var(--shadow-md); }
+.card-static::before { display:none; }
+.card-static:hover { transform:none; box-shadow: var(--shadow-md); }
 
 /* Alumni cards */
 .alumni-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:1.2rem; }

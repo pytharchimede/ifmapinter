@@ -28,11 +28,11 @@
 
 <section class="section section-tight" id="mission">
     <div class="container">
-        <div class="grid-2" style="align-items:start;gap:2.4rem;">
+        <div class="grid-2" style="align-items:start;gap:3.4rem;">
             <div>
                 <h2>Mission & Vision</h2>
                 <p>Former les talents qui accélèrent la transformation économique et technologique en Afrique, par des parcours professionnalisants alignés sur les besoins réels des organisations.</p>
-                <div class="grid-3" style="margin-top:1.4rem;">
+                <div class="grid-3" style="margin-top:1.8rem;">
                     <div class="card-elevated" style="padding:1.2rem;">
                         <h3 style="margin-top:0;font-size:1.05rem;">Pedagogie Active</h3>
                         <p style="font-size:.9rem;">Cas réels, ateliers techniques, projets intégrés.</p>
@@ -48,8 +48,8 @@
                 </div>
             </div>
             <aside>
-                <div class="card-elevated" style="overflow:hidden;">
-                    <img loading="lazy" src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=60" alt="Campus IFMAP" style="width:100%;height:240px;object-fit:cover;">
+                <div class="card-elevated campus-card" style="overflow:hidden;">
+                    <img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=70" alt="Campus IFMAP" style="width:100%;height:300px;object-fit:cover;object-position:center;display:block;">
                     <div style="padding:1rem 1.1rem;">
                         <h3 style="margin-top:0;font-size:1rem;">Infrastructures</h3>
                         <p style="font-size:.85rem;">Labs techniques, salles collaboratives, espaces d'innovation et pôle carrière au service de l'apprentissage pratique.</p>
@@ -67,48 +67,36 @@
             <h2>Mot du Directeur</h2>
             <p>Leadership académique et vision stratégique.</p>
         </div>
-        <div class="grid-2" style="gap:2.2rem;align-items:start;">
-            <div class="card-elevated" style="padding:1.6rem;">
-                <div style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;">
-                    <img loading="lazy" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop" alt="Directeur" style="width:120px;height:120px;object-fit:cover;border-radius:50%;box-shadow:var(--shadow-sm);">
-                    <div>
-                        <h3 style="margin:0;font-size:1.15rem;">Dr. A. Directeur</h3>
-                        <p style="margin:.2rem 0 .4rem;font-size:.85rem;opacity:.8;">Directeur Général – IFMAP</p>
-                        <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-                            <span class="badge-soft">Stratégie</span>
-                            <span class="badge-soft">Innovation</span>
-                            <span class="badge-soft">Impact</span>
-                        </div>
-                    </div>
+        <div class="director-grid">
+            <div class="director-photo">
+                <img loading="lazy" decoding="async" src="https://ifmap.ci/uploads/user_image/optimized/25519c640eb8812e9e8220d334f6f897.jpg" alt="Dr ZIGOLI GAHIE CLEMENT, Fondateur IFMAP">
+                <h3>Dr ZIGOLI GAHIE CLEMENT</h3>
+                <p class="role">Fondateur & Directeur Général – IFMAP</p>
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                    <span class="badge-soft">Stratégie</span>
+                    <span class="badge-soft">Innovation</span>
+                    <span class="badge-soft">Impact</span>
                 </div>
-                <p style="margin-top:1rem;line-height:1.55;font-size:.95rem;">"Notre engagement est clair : relier formation et performance opérationnelle. Nous co‑construisons avec les entreprises des parcours qui accélèrent l'employabilité et soutiennent une croissance inclusive. L'Institut IFMAP se veut un catalyseur : compétences techniques, management agile et culture d'innovation durable."</p>
-                <p style="margin-top:1rem;font-size:.85rem;opacity:.75;">Bienvenue à celles et ceux qui souhaitent bâtir un futur compétent et responsable.</p>
             </div>
-            <div class="timeline" style="margin-top:.4rem;">
-                <div class="timeline-item">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
+            <div class="director-content">
+                <div class="director-message">
+                    <p>"Notre engagement est clair : relier formation et performance opérationnelle. Nous co‑construisons avec les entreprises des parcours qui accélèrent l'employabilité et soutiennent une croissance inclusive. L'Institut IFMAP se veut un catalyseur : compétences techniques, management agile et culture d'innovation durable."</p>
+                    <p>Bienvenue à celles et ceux qui souhaitent bâtir un futur compétent et responsable.</p>
+                </div>
+                <div class="timeline compact">
+                    <div class="tl-item">
                         <h4>2019 – Fondation</h4>
                         <p>Lancement de l'initiative avec un noyau de programmes pilotes.</p>
                     </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
+                    <div class="tl-item">
                         <h4>2021 – Expansion</h4>
                         <p>Ouverture des pôles techniques & renforcement partenariats.</p>
                     </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
+                    <div class="tl-item">
                         <h4>2023 – Accélération</h4>
                         <p>Adoption d'approches data & numérique responsable.</p>
                     </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
+                    <div class="tl-item">
                         <h4>2025 – Impact</h4>
                         <p>Consolidation de l'écosystème carrière & innovation durable.</p>
                     </div>

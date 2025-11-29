@@ -9,7 +9,7 @@
             <a href="#galerie-campus" class="btn-outline">Galerie</a>
             <a href="#phases-campus" class="btn-outline">Phases</a>
         </div>
-        <div class="stats-grid">
+        <div class="stats-grid" style="margin-top:1.2rem;">
             <div class="stat-box">
                 <h3>6</h3><small>ZONES prévues</small>
             </div>
@@ -31,7 +31,7 @@
             <h2>Vision pédagogique</h2>
             <p class="muted">Un écosystème physique qui soutient la pratique intensive, l'expérimentation et la co‑création.</p>
         </div>
-        <div class="grid-3">
+        <div class="grid-3" style="margin-top:1.6rem;">
             <div class="card-elevated">
                 <h3>Apprentissage actif</h3>
                 <p>Méthodes par projets, études de cas contextualisées et simulation.</p>
@@ -53,7 +53,7 @@
             <h2>Galerie conceptuelle</h2>
             <p class="muted">Rendus / inspirations préfigurant l'esthétique générale des espaces.</p>
         </div>
-        <div class="grid-3">
+        <div class="grid-3" style="margin-top:1.6rem;">
             <div class="card-elevated"><img loading="lazy" src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=800&q=60" alt="Centre technique" style="width:100%;height:160px;object-fit:cover;border-radius:10px;margin:-4px 0 10px;">
                 <h3>Centre technique</h3>
                 <p>Espace dédié industrie légère & électrotechnique.</p>
@@ -75,7 +75,7 @@
             <h2>Phases du projet</h2>
             <p class="muted">Progression structurée pour garantir qualité et impact.</p>
         </div>
-        <div class="timeline">
+        <div class="timeline compact" style="margin-top:1.6rem;">
             <div class="tl-item">
                 <h4>Phase 1 – Études & conception</h4>
                 <p>Analyse des besoins, master plan fonctionnel, specs techniques.</p>
