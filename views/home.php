@@ -272,7 +272,43 @@
             </div>
             <div class="grid-3">
                 <?php foreach ($rssPreview as $r): ?>
+                    <?php
+                    $img = '';
+                    // Essayer description d'abord
+                    if (!empty($r['description'])) {
+                        if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $r['description'], $m)) {
+                            $img = $m[1];
+                        }
+                    }
+                    // Sinon tenter depuis la page (og:image puis <img>)
+                    if ($img === '') {
+                        $link = $r['link'] ?? '';
+                        if ($link) {
+                            try {
+                                $ctx = stream_context_create([
+                                    'http' => ['timeout' => 2, 'user_agent' => 'IFMAP-HomeNewsBot/1.0'],
+                                    'https' => ['timeout' => 2, 'user_agent' => 'IFMAP-HomeNewsBot/1.0']
+                                ]);
+                                $html = @file_get_contents($link, false, $ctx);
+                                if ($html) {
+                                    if (preg_match('#<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']#i', $html, $mOg)) {
+                                        $img = $mOg[1];
+                                    }
+                                    if ($img === '' && preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $html, $m2)) {
+                                        $img = $m2[1];
+                                    }
+                                }
+                            } catch (\Throwable $e) {
+                                // ignore
+                            }
+                        }
+                    }
+                    if ($img === '') {
+                        $img = 'https://images.unsplash.com/photo-1522199755839-a2f1f1d8b6f9?auto=format&fit=crop&w=1200&q=60';
+                    }
+                    ?>
                     <div class="card">
+                        <img loading="lazy" src="<?= htmlspecialchars($img) ?>" alt="Illustration" style="width:100%;height:180px;object-fit:cover;display:block;">
                         <div class="card-body">
                             <h4><?= htmlspecialchars($r['title']) ?></h4>
                             <p><?= htmlspecialchars(mb_strimwidth($r['description'] ?? '', 0, 160, '…')) ?></p>

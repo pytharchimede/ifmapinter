@@ -307,6 +307,8 @@ body.dark footer .footer-map-btn { background:#00c9a7; color:#0a2540; }
 .form-input:focus, .form-textarea:focus { outline:2px solid var(--color-primary); outline-offset:2px; background:#fff; }
 body.dark .form-input, body.dark .form-textarea { background: var(--color-surface); color: var(--color-text); }
 body.dark .form-input:focus, body.dark .form-textarea:focus { background: var(--color-surface-alt); }
+/* Ensure inputs are interactive */
+.form-input, .form-textarea { pointer-events:auto; position:relative; }
 
 /* Contact channels refinement */
 .contact-channels-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:1.2rem; margin-top:.8rem; }

@@ -19,7 +19,7 @@
             </div>
         <?php endif; ?>
         <div class="grid-2" style="gap:2.4rem;align-items:start;">
-            <form method="post" action="<?= base_url('contact') ?>" class="card-elevated" style="padding:1.6rem;">
+            <form method="post" action="<?= base_url('contact') ?>" class="card-elevated" style="padding:1.6rem;position:relative;z-index:2;">
                 <?= csrf_field() ?>
                 <h2 style="margin-top:0;font-size:1.3rem;"><?= htmlspecialchars(t('page.contact.form.title') ?? "Écrire à l'équipe") ?></h2>
                 <p style="margin:-.3rem 0 1.2rem;font-size:.85rem;opacity:.75;"><?= htmlspecialchars(t('page.contact.form.subtitle') ?? 'Réponse sous 24h ouvrées.') ?></p>
@@ -50,7 +50,7 @@
                     <small style="font-size:.7rem;opacity:.6;">En soumettant vous acceptez notre politique de confidentialité.</small>
                 </div>
             </form>
-            <aside style="display:flex;flex-direction:column;gap:1.4rem;">
+            <aside style="display:flex;flex-direction:column;gap:1.4rem;position:relative;z-index:1;">
                 <div class="card-elevated" id="canaux" style="padding:1.2rem;">
                     <h3 style="margin-top:0;font-size:1.05rem;"><?= htmlspecialchars(t('page.contact.channels.title') ?? 'Canaux Directs') ?></h3>
                     <p style="font-size:.85rem;opacity:.75;"><?= htmlspecialchars(t('page.contact.channels.subtitle') ?? 'Choisissez le canal le plus adapté à votre demande.') ?></p>
