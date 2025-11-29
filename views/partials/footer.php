@@ -7,22 +7,26 @@
   <footer id="contact">
       <div class="footer-inner">
           <div>
-              <h3>Contact</h3>
-              <p>Email : <?= htmlspecialchars($settings['contact_email'] ?? 'contact@ifmap.ci') ?></p>
-              <p>Téléphone : <?= htmlspecialchars($settings['contact_phone'] ?? '+225 01 71 31 85 11') ?></p>
-              <p>Adresse : <?= htmlspecialchars($settings['contact_address'] ?? 'Abidjan, Côte d’Ivoire') ?></p>
+              <h3><?= htmlspecialchars(t('footer.contact.title') ?? 'Contact') ?></h3>
+              <p><strong><?= htmlspecialchars(t('footer.email.label') ?? 'Email') ?> :</strong> <?= htmlspecialchars($settings['contact_email'] ?? 'contact@ifmap.ci') ?></p>
+              <p><strong><?= htmlspecialchars(t('footer.phone.label') ?? 'Téléphone') ?> :</strong> <?= htmlspecialchars($settings['contact_phone'] ?? '+225 01 71 31 85 11') ?></p>
+              <p><strong><?= htmlspecialchars(t('footer.address.label') ?? 'Adresse') ?> :</strong> <?= htmlspecialchars($settings['contact_address'] ?? 'Abidjan, Côte d’Ivoire') ?></p>
+              <div class="footer-map" aria-label="Carte localisation IFMAP">
+                  <iframe title="Carte IFMAP" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Niangon+Lubafrique+Yopougon+Abidjan+Cote+d'Ivoire&output=embed"></iframe>
+              </div>
+              <button type="button" class="footer-map-btn" onclick="openMapModal()"><?= htmlspecialchars(t('footer.map.btn') ?? 'Voir la carte') ?></button>
           </div>
           <div>
-              <h3>Liens</h3>
+              <h3><?= htmlspecialchars(t('footer.links.title') ?? 'Liens') ?></h3>
               <ul>
-                  <li><a href="<?= htmlspecialchars($settings['link_programmes'] ?? base_url('#programmes')) ?>">Programmes</a></li>
-                  <li><a href="<?= htmlspecialchars($settings['link_formations'] ?? base_url('#formations')) ?>">Formations</a></li>
-                  <li><a href="<?= htmlspecialchars($settings['link_actualites'] ?? base_url('#news')) ?>">Actualités</a></li>
-                  <li><a href="<?= htmlspecialchars($settings['link_partenaires'] ?? base_url('#partenaires')) ?>">Partenaires</a></li>
+                  <li><a href="<?= htmlspecialchars($settings['link_programmes'] ?? base_url('programmes')) ?>"><?= htmlspecialchars(t('nav.programmes') ?? 'Programmes') ?></a></li>
+                  <li><a href="<?= htmlspecialchars($settings['link_formations'] ?? base_url('formations')) ?>"><?= htmlspecialchars(t('nav.formations') ?? 'Formations') ?></a></li>
+                  <li><a href="<?= htmlspecialchars($settings['link_actualites'] ?? base_url('actualites')) ?>"><?= htmlspecialchars(t('nav.news') ?? 'Actualités') ?></a></li>
+                  <li><a href="<?= htmlspecialchars($settings['link_partenaires'] ?? base_url('partenaires')) ?>"><?= htmlspecialchars(t('nav.partners') ?? 'Partenaires') ?></a></li>
               </ul>
           </div>
           <div>
-              <h3>Suivez-nous</h3>
+              <h3><?= htmlspecialchars(t('footer.follow.title') ?? 'Suivez-nous') ?></h3>
               <ul>
                   <li><a href="<?= htmlspecialchars($settings['social_facebook'] ?? '#') ?>" target="_blank" rel="noopener">Facebook</a></li>
                   <li><a href="<?= htmlspecialchars($settings['social_linkedin'] ?? '#') ?>" target="_blank" rel="noopener">LinkedIn</a></li>
@@ -30,8 +34,8 @@
               </ul>
           </div>
           <div>
-              <h3>Newsletter</h3>
-              <p><?= htmlspecialchars($settings['newsletter_text'] ?? 'Recevez nos dernières actualités et événements.') ?></p>
+              <h3><?= htmlspecialchars(t('footer.newsletter.title') ?? 'Newsletter') ?></h3>
+              <p><?= htmlspecialchars($settings['newsletter_text'] ?? (t('footer.newsletter.text') ?? 'Recevez nos dernières actualités et événements.')) ?></p>
               <div class="newsletter">
                   <form id="newsletter-form" method="post" action="<?= base_url('newsletter/subscribe') ?>" onsubmit="return false;">
                       <?= csrf_field() ?>
@@ -73,7 +77,38 @@
                   });
           });
       })();
+      // Map modal
+      function openMapModal() {
+          const m = document.getElementById('map-modal');
+          if (!m) return;
+          m.setAttribute('aria-hidden', 'false');
+          document.body.style.overflow = 'hidden';
+      }
+
+      function closeMapModal() {
+          const m = document.getElementById('map-modal');
+          if (!m) return;
+          m.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
+      }
+      document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') closeMapModal();
+      });
   </script>
+
+  <!-- Map Modal -->
+  <div id="map-modal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" onclick="closeMapModal()"></div>
+      <div class="modal-dialog">
+          <button class="modal-close" onclick="closeMapModal()" aria-label="Fermer">×</button>
+          <div class="modal-content">
+              <h2><?= htmlspecialchars(t('footer.map.title') ?? 'Accès & Carte') ?></h2>
+              <div style="height:340px;border-radius:12px;overflow:hidden;margin-top:.6rem;background:#eef2f7;">
+                  <iframe title="Carte IFMAP" width="100%" height="100%" style="border:0;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Niangon+Lubafrique+Yopougon+Abidjan+Cote+d'Ivoire&output=embed"></iframe>
+              </div>
+          </div>
+      </div>
+  </div>
 
   </body>
 
