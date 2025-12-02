@@ -463,3 +463,121 @@ if (galleryGrid) {
   // Initial page load
   fetchNextPage(true);
 }
+
+/* ================= ADMIN: AUTO-COMPRESSION IMAGES ================= */
+(function () {
+  // Compresse une image File en Blob (JPEG par défaut)
+  async function compressImageFile(file, opts = {}) {
+    const {
+      maxWidth = 1600,
+      maxHeight = 1600,
+      quality = 0.8,
+      mime = "image/jpeg",
+    } = opts;
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const { width, height } = img;
+        let tw = width,
+          th = height;
+        const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
+        tw = Math.round(width * ratio);
+        th = Math.round(height * ratio);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = tw;
+        canvas.height = th;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, tw, th);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject(new Error("Compression échouée"));
+            resolve(blob);
+          },
+          mime,
+          quality
+        );
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  // Remplace le fichier sélectionné par la version compressée si elle est plus petite
+  async function maybeCompressInputFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    // Seulement images
+    if (!/^image\//.test(file.type)) return;
+
+    try {
+      // Lire options depuis data-attributes (input prioritaire sur form)
+      const form = input.closest("form");
+      const getNum = (el, name, def) => {
+        const v = el && el.getAttribute(name);
+        const n = v != null ? parseFloat(v) : NaN;
+        return Number.isFinite(n) ? n : def;
+      };
+      const getStr = (el, name, def) => {
+        const v = el && el.getAttribute(name);
+        return v ? v : def;
+      };
+      const maxWidth = getNum(
+        input,
+        "data-img-max-width",
+        getNum(form, "data-img-max-width", 1600)
+      );
+      const maxHeight = getNum(
+        input,
+        "data-img-max-height",
+        getNum(form, "data-img-max-height", 1600)
+      );
+      const quality = getNum(
+        input,
+        "data-img-quality",
+        getNum(form, "data-img-quality", 0.8)
+      );
+      const mime = getStr(
+        input,
+        "data-img-mime",
+        getStr(form, "data-img-mime", "image/jpeg")
+      );
+
+      const blob = await compressImageFile(file, {
+        maxWidth,
+        maxHeight,
+        quality,
+        mime,
+      });
+      // Si la compression n'apporte rien, garder l'original
+      if (blob.size >= file.size * 0.98) return;
+      const dt = new DataTransfer();
+      const targetExt = (mime || "image/jpeg").toLowerCase().includes("png")
+        ? ".png"
+        : ".jpg";
+      const compressedFile = new File(
+        [blob],
+        (file.name || "image").replace(/\.(png|webp|gif|bmp|jpeg|jpg)$/i, "") +
+          targetExt,
+        { type: blob.type }
+      );
+      dt.items.add(compressedFile);
+      input.files = dt.files;
+      // Déclenche un event pour que les previews se mettent à jour
+      input.dispatchEvent(new Event("change"));
+    } catch (e) {
+      console.warn("Compression image: ", e);
+    }
+  }
+
+  // Écoute tous les inputs image dans les pages (admin inclus)
+  document.addEventListener("change", (e) => {
+    const input = e.target.closest('input[type="file"]');
+    if (!input) return;
+    const accept = (input.getAttribute("accept") || "").toLowerCase();
+    if (accept.includes("image")) {
+      // Petite latence pour laisser le navigateur remplir input.files
+      setTimeout(() => maybeCompressInputFile(input), 0);
+    }
+  });
+})();

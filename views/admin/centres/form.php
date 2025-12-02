@@ -5,7 +5,7 @@ $title = $title ?? ($item ? 'Modifier Centre' : 'Ajouter Centre');
 <?php include __DIR__ . '/../../partials/admin_header.php'; ?>
 <div class="container">
     <h1><?= htmlspecialchars($title) ?></h1>
-    <form method="post" action="<?= base_url($item ? '/admin/centres/edit' : '/admin/centres/create') ?>" enctype="multipart/form-data">
+    <form method="post" action="<?= base_url($item ? '/admin/centres/edit' : '/admin/centres/create') ?>" enctype="multipart/form-data" data-img-max-width="1600" data-img-max-height="1600" data-img-quality="0.8" data-img-mime="image/jpeg">
         <?= csrf_field() ?>
         <?php if ($item): ?>
             <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">

@@ -4,7 +4,7 @@
     <div class="container" style="max-width:1100px;">
         <h2><?= htmlspecialchars($title) ?></h2>
         <p><a href="<?= base_url('/admin/programmes') ?>">Retour</a></p>
-        <form method="post" action="<?= base_url($item ? '/admin/programmes/edit' : '/admin/programmes/create') ?>" class="card admin-form" style="padding:24px;" enctype="multipart/form-data">
+        <form method="post" action="<?= base_url($item ? '/admin/programmes/edit' : '/admin/programmes/create') ?>" class="card admin-form" style="padding:24px;" enctype="multipart/form-data" data-img-max-width="1600" data-img-max-height="1600" data-img-quality="0.8" data-img-mime="image/jpeg">
             <?= csrf_field() ?>
             <?php if ($item): ?>
                 <input type="hidden" name="id" value="<?= (int)$item['id'] ?>" />

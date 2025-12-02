@@ -13,7 +13,7 @@
 
 <section class="admin-card" style="margin-bottom:1rem;">
     <h2>Contenu de l’article</h2>
-    <form method="post" action="<?= base_url('admin/programmes/update') ?>" enctype="multipart/form-data">
+    <form method="post" action="<?= base_url('admin/programmes/update') ?>" enctype="multipart/form-data" data-img-max-width="1600" data-img-max-height="1600" data-img-quality="0.8" data-img-mime="image/jpeg">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="id" value="<?= (int)($item['id'] ?? 0) ?>">
 
